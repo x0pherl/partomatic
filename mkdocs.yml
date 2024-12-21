@@ -1,0 +1,18 @@
+site_name: Partomatic
+site_url: https://partomatic.readthedocs.io/
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.expand
+    - navigation.path
+    - toc.integrate
+markdown_extensions:
+  - attr_list
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - toc:
+      toc_depth: 3
+nav:
+  - Overview: partomatic.md
