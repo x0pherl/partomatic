@@ -2,7 +2,7 @@
 
 Partomatic is an attempt to build an automatable ecosystem for generating parametric models through automation -- making CI/CD automation possible for your 3d models.
 
-# The Partomatic philosophy behind Fender-Bender
+# The Partomatic philosophy
 
 Build123d is a powerful library, but it leaves the creation of final parts up to the developer. For a large project with many related and interlocking parts, this can make releasing a new version a project in and of itself.
 

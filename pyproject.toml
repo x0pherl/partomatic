@@ -1,6 +1,6 @@
 [project]
+dynamic = ["version"]
 name = "partomatic"
-version = "0.0.1"
 authors = [
   { name="x0pherl"},
 ]
@@ -16,7 +16,11 @@ classifiers = [
 [project.urls]
 Homepage = "https://github.com/x0pher/partomatic"
 Issues = "https://github.com/x0pher/partomatic/issues"
+Documentation = "https://partomatic.readthedocs.org"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
