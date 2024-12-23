@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import patch
 from pathlib import Path
 
-from partomatic import BuildablePart, PartomaticConfig, Partomatic
+from partomatic import AutomatablePart, PartomaticConfig, Partomatic
 from build123d import BuildPart, Box, Part, Sphere, Align, Mode, Location
 
 
@@ -111,13 +111,6 @@ Part:
         assert config.stl_folder == "config_create_folder"
 
 
-class TestBuildablePart:
-    def test_extension_removed(self):
-        widget_part = Part()
-        widget = BuildablePart(widget_part, "widget.stl")
-        assert widget.file_name == "widget"
-
-
 @dataclass
 class WidgetConfig(PartomaticConfig):
     stl_folder: str = field(default="C:\\Users\\xopher\\Downloads")
@@ -145,7 +138,7 @@ class Widget(Partomatic):
             )
 
         self.parts.append(
-            BuildablePart(
+            AutomatablePart(
                 holebox.part,
                 "test",
                 display_location=Location((9, 0, 9)),

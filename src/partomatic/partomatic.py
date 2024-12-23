@@ -11,7 +11,7 @@ import ocp_vscode
 import yaml
 
 from .partomatic_config import PartomaticConfig
-from .buildable_part import BuildablePart
+from .automatable_part import AutomatablePart
 
 
 class Partomatic(ABC):
@@ -23,7 +23,7 @@ class Partomatic(ABC):
     """
 
     _config: PartomaticConfig
-    parts: list[BuildablePart] = field(default_factory=list)
+    parts: list[AutomatablePart] = field(default_factory=list)
 
     @abstractmethod
     def compile(self):
@@ -45,7 +45,7 @@ class Partomatic(ABC):
             reset_camera=ocp_vscode.Camera.KEEP,
         )
 
-    def complete_stl_file_path(self, part: BuildablePart) -> str:
+    def complete_stl_file_path(self, part: AutomatablePart) -> str:
         return str(
             Path(
                 Path(part.stl_folder)

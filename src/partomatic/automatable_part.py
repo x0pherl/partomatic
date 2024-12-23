@@ -1,4 +1,4 @@
-"""BuildablePart is a dataclass that contains a Part object and additional inormation for saving and
+"""AutomatablePart is a dataclass that contains a Part object and additional inormation for saving and
 displaying the part"""
 
 from dataclasses import dataclass, field, fields, is_dataclass, MISSING
@@ -9,7 +9,7 @@ from build123d import Part, Location
 
 
 @dataclass
-class BuildablePart(Part):
+class AutomatablePart(Part):
     part: Part = field(default_factory=Part)
     display_location: Location = field(default_factory=Location)
     stl_folder: str = getcwd()
@@ -33,7 +33,7 @@ class BuildablePart(Part):
     @file_name.setter
     def file_name(self, value: str):
         """
-        Assigns the file name to the BuildablePart, ensuring that no
+        Assigns the file name to the AutomatablePart, ensuring that no
         file extension is included.
         """
         self._file_name = Path(value).stem

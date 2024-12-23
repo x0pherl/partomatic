@@ -1,13 +1,13 @@
 ## The elements of Partomatic
 
 There are three elements of Partomatic.
-- `BuildablePart`
+- `AutomatablePart`
 - `PartomaticConfig`
 - `Partomatic`
 
-## BuildablePart
+## AutomatablePart
 
-BuildablePart is a small wrapper around build123d's Part class that adds some useful additional data for generating parts in an automated context. These variables are members of the BuildablePart class:]
+AutomatablePart is a small wrapper around build123d's Part class that adds some useful additional data for generating parts in an automated context. These variables are members of the AutomatablePart class:]
 ```
     part: Part = field(default_factory=Part)
     display_location: Location = field(default_factory=Location)
@@ -15,8 +15,8 @@ BuildablePart is a small wrapper around build123d's Part class that adds some us
     _file_name: str = "partomatic"
 ```
 
-`part` is simply a build123d `Part` object
-`display_location` defines a build123d `Location` in which to display the object (this is useful combining multiple `BuildablePart`s into a single Partomatic object, and will be covered below)
+<!-- `part` is simply a build123d `Part` object -->
+`display_location` defines a build123d `Location` in which to display the object (this is useful combining multiple `AutomatablePart`s into a single Partomatic object, and will be covered below)
 `stl_folder` defines the folder in which the part should be saved
 `file_name` (there are getters and setters for the `_filename` variable) defines the base file name. Note that this base will likely be combined with prefixes and suffixes that describe the parametric configuration, so any extension that is passed will be automatically stripped off.
 
@@ -172,16 +172,16 @@ Partomatic automatically handles the `__init__` method as well as `load_config`.
 Partomatic defines two important variables that you descendent classes will inherit:
 ```
     _config: PartomaticConfig
-    parts: list[BuildablePart] = field(default_factory=list)
+    parts: list[AutomatablePart] = field(default_factory=list)
 ```
 
-`_config` stores the parameters from a PartomaticConfig object. `parts` is a list of BuildableParts, which partomatic will display or export when the appropriate methods are called.
+`_config` stores the parameters from a PartomaticConfig object. `parts` is a list of AutomatableParts, which partomatic will display or export when the appropriate methods are called.
 
 ### Abstract `compile` method
 
 Partomatic defines an abstract methods which must be defined within a descendent class.
 
-This method is responsible for generating the 3d geometry for each component. It should clear the parts list and regenerate each element of your design as a BuildablePart.
+This method is responsible for generating the 3d geometry for each component. It should clear the parts list and regenerate each element of your design as a AutomatablePart.
 
 A simple example might look like this:
 
@@ -197,7 +197,7 @@ A simple example might look like this:
         """
         self.parts.clear()
         self.parts.append(
-            BuildablePart(
+            AutomatablePart(
                 self.complete_wheel(),
                 "complete-wheel",
                 stl_folder=self._config.stl_folder,
@@ -210,11 +210,11 @@ A simple example might look like this:
 
 #### `display`
 
-The `display` method will display each BuildablePart in the `parts` list in the appropriate display_location
+The `display` method will display each AutomatablePart in the `parts` list in the appropriate display_location
 
 #### `export_stls`
 
- This method calculates the appropriate file path based on the descendant class' `stl_folder`, `file_prefix`, the `BuildablePart`'s `file_name` and the `file_prefix`. If `create_folders_if_missing` is set to False, no part will be saved if the file is not present.
+ This method calculates the appropriate file path based on the descendant class' `stl_folder`, `file_prefix`, the `AutomatablePart`'s `file_name` and the `file_prefix`. If `create_folders_if_missing` is set to False, no part will be saved if the file is not present.
 
  #### `load_config`
 

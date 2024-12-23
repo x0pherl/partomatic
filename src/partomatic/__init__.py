@@ -1,3 +1,3 @@
 from .partomatic import Partomatic
-from .buildable_part import BuildablePart
+from .automatable_part import AutomatablePart
 from .partomatic_config import PartomaticConfig
