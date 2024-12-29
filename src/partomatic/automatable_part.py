@@ -9,10 +9,11 @@ from build123d import Part, Location
 
 
 @dataclass
-class AutomatablePart(Part):
+class AutomatablePart():
     part: Part = field(default_factory=Part)
     display_location: Location = field(default_factory=Location)
     stl_folder: str = getcwd()
+    #todo this should not be file_name, maybe _file_name_base
     _file_name: str = "partomatic"
 
     def __init__(self, part, file_name, **kwargs):
