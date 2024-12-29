@@ -13,3 +13,8 @@ class TestAutomatablePart:
         widget_part = Part()
         widget = AutomatablePart(widget_part, "widget.stl")
         assert widget.file_name == "widget"
+
+    def test_extension_removed(self):
+        widget_part = Part()
+        widget = AutomatablePart(widget_part, "widget.stl")
+        assert widget.file_name == "widget"
