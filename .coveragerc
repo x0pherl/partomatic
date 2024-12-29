@@ -1,0 +1,6 @@
+[run]
+omit =
+    *test*
+    *conftest*
+[report]
+show_missing = True
