@@ -109,6 +109,9 @@ class Partomatic(ABC):
             (example: "BigObject/Partomatic")
         """
         self.parts = []
+        # we have to call self.__class__.config so it can handle instanting
+        # the descendant class of PartomaticConfig instead of using the generic
+        # parent implementation
         self._config = self.__class__._config
         self.load_config(configuration, **kwargs)
 
