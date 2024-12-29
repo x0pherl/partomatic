@@ -1,6 +1,6 @@
 [project]
-dynamic = ["version"]
 name = "partomatic"
+version = "0.1.1"
 authors = [
   { name="x0pherl"},
 ]
@@ -21,6 +21,3 @@ Documentation = "https://partomatic.readthedocs.org"
 [build-system]
 requires = ["setuptools >= 61.0"]
 build-backend = "setuptools.build_meta"
-
-[tool.setuptools.dynamic]
-version = {attr = "partomatic.__version__.__version__"}
