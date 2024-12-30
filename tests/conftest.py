@@ -13,7 +13,9 @@ def wheel_config_yaml():
 wheel:
     depth: 10
     radius: 30
+    number: THREE
     bearing:
         radius: 4
         spindle_radius: 1.5
+        number: TWO
         """

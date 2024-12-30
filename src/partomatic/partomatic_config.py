@@ -89,6 +89,28 @@ class PartomaticConfig(metaclass=AutoDataclassMeta):
                         )
                     else:
                         setattr(self, classfield.name, value)
+        if kwargs:
+            for key, value in kwargs.items():
+                classfield = next(
+                    (f for f in fields(self.__class__) if f.name == key),
+                    None,
+                )
+                if classfield:
+                    if is_dataclass(classfield.type):
+                        if isinstance(value, dict):
+                            setattr(self, key, classfield.type(**value))
+                        else:
+                            setattr(self, key, value)
+                    elif isinstance(classfield.type, type) and issubclass(
+                        classfield.type, (Enum, Flag)
+                    ):
+                        setattr(
+                            self,
+                            classfield.name,
+                            classfield.type[value.upper()],
+                        )
+                    else:
+                        setattr(self, key, value)
 
     def __init__(self, configuration: any = None, **kwargs):
         """
@@ -113,19 +135,6 @@ class PartomaticConfig(metaclass=AutoDataclassMeta):
         if configuration is not None:
             self.load_config(configuration, yaml_tree=self.yaml_tree)
         elif kwargs:
-            self._default_config()
-            for key, value in kwargs.items():
-                classfield = next(
-                    (f for f in fields(self.__class__) if f.name == key),
-                    None,
-                )
-                if classfield:
-                    if is_dataclass(classfield.type):
-                        if isinstance(value, dict):
-                            setattr(self, key, classfield.type(**value))
-                        else:
-                            setattr(self, key, value)
-                    else:
-                        setattr(self, key, value)
+            self.load_config(configuration=configuration, **kwargs)
         else:
             self._default_config()

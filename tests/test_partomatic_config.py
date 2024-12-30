@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from enum import Enum, auto
 import pytest
-from unittest.mock import patch
+from unittest.mock import mock_open, patch
 from pathlib import Path
 from partomatic import PartomaticConfig
 
@@ -29,12 +29,14 @@ class BearingConfig(PartomaticConfig):
     yaml_tree: str = "wheel/bearing"
     radius: float = 10
     spindle_radius: float = 2
+    number: FakeEnum = FakeEnum.ONE
 
 
 class WheelConfig(PartomaticConfig):
     yaml_tree = "wheel"
     depth: float = 2
     radius: float = 50
+    number: FakeEnum = FakeEnum.ONE
     bearing: BearingConfig = field(default_factory=BearingConfig)
 
 
@@ -74,60 +76,90 @@ Part:
         assert config.bearing.__class__ == BearingConfig
         assert config.bearing.radius == 4
         assert config.bearing.spindle_radius == 1.5
+        assert config.bearing.number == FakeEnum.TWO
 
-    def test_yaml_partomat(self):
-        config = PartomaticConfig(self.config_yaml)
-        assert config.stl_folder == "yaml_folder"
+    def test_load_yaml_wheel_from_file(self, wheel_config_yaml):
+        mock_file_path = "mock_wheel_config.yaml"
+        with patch.object(Path, "exists", return_value=True):
+            with patch.object(Path, "is_file", return_value=True):
+                with patch.object(
+                    Path, "read_text", return_value=wheel_config_yaml
+                ):
+                    config = WheelConfig(mock_file_path)
+                    assert config.depth == 10
+                    assert config.radius == 30
+                    assert config.bearing.__class__ == BearingConfig
+                    assert config.bearing.radius == 4
+                    assert config.bearing.spindle_radius == 1.5
 
-    def test_empty_partomat(self):
-        config = PartomaticConfig()
-        assert config.stl_folder == "NONE"
+    def test_instantiating_with_object(self, wheel_config_yaml):
+        base_wheel = WheelConfig(wheel_config_yaml)
+        config = WheelConfig(base_wheel)
+        assert config.depth == 10
+        assert config.radius == 30
+        assert config.bearing.__class__ == BearingConfig
+        assert config.bearing.radius == 4
+        assert config.bearing.spindle_radius == 1.5
 
-    def test_subconfig(self):
-        config = SubConfig(self.blah_config_yaml, yaml_tree="Foo/Blah")
-        assert config.stl_folder == "yaml_blah_folder"
-        assert config.sub_field == "yaml_sub_field"
-        assert config.sub_enum == FakeEnum.TWO
+    def test_no_default_descendant(self):
+        class BadConfig(PartomaticConfig):
+            yaml_tree = "wheel"
+            no_default: float
 
-    def test_kwargs(self):
-        config = SubConfig(yaml_tree="Part/Blah", sub_field="kwargsub")
-        assert config.stl_folder == "NONE"
-        assert config.sub_field == "kwargsub"
-
-    def test_yaml_container_partomat(self):
-        config = ContainerConfig(self.sub_config_yaml)
-        assert config.container_field == "yaml_container_field"
-        assert config.sub.sub_field == "yaml_sub_field"
-
-    def test_invalid_config(self):
         with pytest.raises(ValueError):
-            ContainerConfig("invalid_config")
+            x = BadConfig()
 
-    def test_yaml_container_with_dict_partomat(self):
-        config = ContainerConfig(
-            sub={
-                "stl_folder": "yaml_blah_folder",
+    def test_bad_yaml_config(self):
+        yaml = """
+test:
+    field: 2
+    sub_test:
+        sub_field: 3
+"""
+        with pytest.raises(ValueError):
+            config = WheelConfig(yaml)
+
+    def test_nested_load(self):
+        car_yaml = """
+car:
+    car_param_1: 1
+    drivetrain:
+        drive_train_param_1: 2
+        wheel:
+            depth: 10
+            radius: 30
+            bearing:
+                radius: 4.7
+                spindle_radius: 1.5
+"""
+        wheel_config = WheelConfig(car_yaml, yaml_tree="car/drivetrain/wheel")
+        assert wheel_config.bearing.radius == 4.7
+
+    def test_passed_params(self):
+        bearing_config = BearingConfig(radius=20.6, spindle_radius=10)
+        wheel_config = WheelConfig(
+            depth=5, radius=50.2, bearing=bearing_config
+        )
+        assert wheel_config.bearing.radius == 20.6
+        assert wheel_config.radius == 50.2
+
+    def test_sub_dict(self):
+        config = WheelConfig(
+            bearing={
+                "yaml_tree": "wheel/bearing",
                 "file_prefix": "yaml_blah_prefix",
                 "file_suffix": "yaml_blah_suffix",
-                "sub_field": "yaml_sub_field",
-                "sub_enum": "TWO",
+                "radius": 88.2,
+                "spindle_radius": 44.1,
+                "number": "TWO",
             }
         )
-        assert config.sub.sub_field == "yaml_sub_field"
+        assert config.bearing.radius == 88.2
+        assert config.bearing.number == FakeEnum.TWO
 
-    def test_yaml_container_with_class_partomat(self):
-        sub_config = SubConfig(self.blah_config_yaml, yaml_tree="Foo/Blah")
-
-        config = ContainerConfig(sub=sub_config)
-        assert config.sub.sub_field == "yaml_sub_field"
-
-    def test_default_container_partomat(self):
-        config = ContainerConfig()
-        assert config.container_field == "container_default"
-        assert config.sub.sub_field == "sub_default"
-
-    def test_config_create(self):
-        config = PartomaticConfig()
-        config.stl_folder = "config_create_folder"
-        config = PartomaticConfig(config)
-        assert config.stl_folder == "config_create_folder"
+    def test_default_wheel(self):
+        config = WheelConfig()
+        assert config.depth == 2
+        assert config.radius == 50
+        assert config.bearing.radius == 10
+        assert config.bearing.spindle_radius == 2
