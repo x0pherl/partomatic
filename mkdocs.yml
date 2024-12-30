@@ -17,4 +17,8 @@ markdown_extensions:
   - markdown_include.include:
       base_path: .
 nav:
-  - Developer’s Guide: partomatic.md
+  - Overview: index.md
+  - Developers Guide:
+    - AutomatablePart: automatable_part.md
+    - PartomaticConfig: partomatic_config.md
+    - Partomatic: partomatic.md

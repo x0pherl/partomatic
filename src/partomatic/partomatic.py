@@ -49,7 +49,7 @@ class Partomatic(ABC):
         return str(
             Path(
                 Path(part.stl_folder)
-                / f"{self._config.file_prefix}{part.file_name}{self._config.file_suffix}"
+                / f"{self._config.file_prefix}{part.file_name_base}{self._config.file_suffix}"
             ).with_suffix(".stl")
         )
 

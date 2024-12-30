@@ -10,17 +10,17 @@ from build123d import BuildPart, Box, Sphere, Align, Mode, Location, Part
 
 class TestAutomatablePart:
     def test_extension_removed(self):
-        widget_part = Part()
-        widget = AutomatablePart(widget_part, "widget.stl")
-        assert widget.file_name == "widget"
+        wheel_part = Part()
+        wheel_automatable = AutomatablePart(wheel_part, "wheel.stl")
+        assert wheel_automatable.file_name_base == "wheel"
 
     def test_kwargs(self):
-        widget_part = Part()
-        widget = AutomatablePart(
-            widget_part,
+        wheel_part = Part()
+        wheel_automatable = AutomatablePart(
+            wheel_part,
             "widget.stl",
             display_location=Location((100, 100, 100)),
             stl_folder="/tmp/test/folder",
         )
-        assert widget.display_location.position.X == 100
-        assert widget.stl_folder == "/tmp/test/folder"
+        assert wheel_automatable.display_location.position.X == 100
+        assert wheel_automatable.stl_folder == "/tmp/test/folder"
