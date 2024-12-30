@@ -3,5 +3,14 @@
         "tests"
     ],
     "python.testing.unittestEnabled": false,
-    "python.testing.pytestEnabled": true
+    "python.testing.pytestEnabled": true,
+    "cSpell.words": [
+        "Automatable",
+        "dataclass",
+        "dataclasses",
+        "getcwd",
+        "kwargs",
+        "partomate",
+        "partomatic"
+    ]
 }
