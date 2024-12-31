@@ -15,11 +15,24 @@ class AutoDataclassMeta(type):
 
 @dataclass
 class PartomaticConfig(metaclass=AutoDataclassMeta):
-    yaml_tree: str = "Part"
     stl_folder: str = "NONE"
     file_prefix: str = ""
     file_suffix: str = ""
     create_folders_if_missing: bool = True
+
+    @property
+    def _clean_config_class_name(self) -> str:
+        """
+        If a class name ends with "Config", this function will remove it,
+        as well as lower casing the input name.
+        -------
+        arguments:
+            - name: the class name to clean
+        """
+        name = self.__class__.__name__
+        if name.lower().endswith("config"):
+            name = name[:-6]
+        return name.lower()
 
     def _default_config(self):
         """
@@ -41,15 +54,7 @@ class PartomaticConfig(metaclass=AutoDataclassMeta):
             - configuration: the path to the configuration file
                 OR
               a valid yaml configuration string
-        -------
-        notes:
-            if yaml_tree is set in the PartomaticConfig descendent,
-            PartomaticConfig will use that tree to find a node deep
-            within the yaml tree, following the node names separated by slashes
-            (example: "BigObject/Partomatic")
         """
-        if "yaml_tree" in kwargs:
-            self.yaml_tree = kwargs["yaml_tree"]
         if isinstance(configuration, self.__class__):
             for field in fields(self):
                 setattr(self, field.name, getattr(configuration, field.name))
@@ -61,12 +66,16 @@ class PartomaticConfig(metaclass=AutoDataclassMeta):
                 if path.exists() and path.is_file():
                     configuration = path.read_text()
             bracket_dict = yaml.safe_load(configuration)
-            for node in self.yaml_tree.split("/"):
-                if node not in bracket_dict:
-                    raise ValueError(
-                        f"Node {node} not found in configuration file"
-                    )
-                bracket_dict = bracket_dict[node]
+            if self._clean_config_class_name in bracket_dict:
+                bracket_dict = bracket_dict[self._clean_config_class_name]
+            elif self.__class__.__name__.lower() in bracket_dict:
+                bracket_dict = bracket_dict[self.__class__.__name__.lower()]
+            elif self.__class__.__name__ in bracket_dict:
+                bracket_dict = bracket_dict[self.__class__.__name__]
+            else:
+                raise ValueError(
+                    f"Configuration file does not contain a node for {self.__class__.__name__}"
+                )
 
             for classfield in fields(self.__class__):
                 if classfield.name in bracket_dict:
@@ -123,18 +132,8 @@ class PartomaticConfig(metaclass=AutoDataclassMeta):
                 OR
               None (default) for an empty object
             - **kwargs: specific fields to set in the configuration
-        -------
-        notes:
-            you can assign yaml_tree as a kwarg here to load a
-            configuration from a node node deep within the yaml tree,
-            following the node names separated by slashes
-            (example: "BigObject/Partomatic")
         """
-        if "yaml_tree" in kwargs:
-            self.yaml_tree = kwargs["yaml_tree"]
-        if configuration is not None:
-            self.load_config(configuration, yaml_tree=self.yaml_tree)
-        elif kwargs:
+        if configuration is not None or kwargs:
             self.load_config(configuration=configuration, **kwargs)
         else:
             self._default_config()

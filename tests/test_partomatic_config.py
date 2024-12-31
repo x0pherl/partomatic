@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import mock_open, patch
 from pathlib import Path
 from partomatic import PartomaticConfig
-
+import yaml
 
 from build123d import BuildPart, Box, Sphere, Align, Mode, Location, Part
 
@@ -26,14 +26,12 @@ class ContainerConfig(PartomaticConfig):
 
 
 class BearingConfig(PartomaticConfig):
-    yaml_tree: str = "wheel/bearing"
     radius: float = 10
     spindle_radius: float = 2
     number: FakeEnum = FakeEnum.ONE
 
 
 class WheelConfig(PartomaticConfig):
-    yaml_tree = "wheel"
     depth: float = 2
     radius: float = 50
     number: FakeEnum = FakeEnum.ONE
@@ -41,33 +39,6 @@ class WheelConfig(PartomaticConfig):
 
 
 class TestPartomaticConfig:
-    config_yaml = """
-Part:
-    stl_folder: "yaml_folder"
-    file_prefix: "yaml_prefix"
-    file_suffix: "yaml_suffix"
-"""
-    blah_config_yaml = """
-Foo:
-    container_field: "yaml_container_field"
-    Blah:
-        stl_folder: "yaml_blah_folder"
-        file_prefix: "yaml_blah_prefix"
-        file_suffix: "yaml_blah_suffix"
-        sub_field: "yaml_sub_field"
-        sub_enum: "TWO"
-"""
-
-    sub_config_yaml = """
-Part:
-    container_field: "yaml_container_field"
-    sub:
-        stl_folder: "yaml_blah_folder"
-        file_prefix: "yaml_blah_prefix"
-        file_suffix: "yaml_blah_suffix"
-        sub_field: "yaml_sub_field"
-        sub_enum: "TWO"
-"""
 
     def test_load_yaml_wheel(self, wheel_config_yaml):
         config = WheelConfig(wheel_config_yaml)
@@ -103,7 +74,6 @@ Part:
 
     def test_no_default_descendant(self):
         class BadConfig(PartomaticConfig):
-            yaml_tree = "wheel"
             no_default: float
 
         with pytest.raises(ValueError):
@@ -132,7 +102,9 @@ car:
                 radius: 4.7
                 spindle_radius: 1.5
 """
-        wheel_config = WheelConfig(car_yaml, yaml_tree="car/drivetrain/wheel")
+        wheel_config = WheelConfig(
+            {"wheel": yaml.safe_load(car_yaml)["car"]["drivetrain"]["wheel"]}
+        )
         assert wheel_config.bearing.radius == 4.7
 
     def test_passed_params(self):
@@ -146,7 +118,6 @@ car:
     def test_sub_dict(self):
         config = WheelConfig(
             bearing={
-                "yaml_tree": "wheel/bearing",
                 "file_prefix": "yaml_blah_prefix",
                 "file_suffix": "yaml_blah_suffix",
                 "radius": 88.2,
@@ -163,3 +134,31 @@ car:
         assert config.radius == 50
         assert config.bearing.radius == 10
         assert config.bearing.spindle_radius == 2
+
+    def test_config_node(self):
+        yaml = """
+WheelConfig:
+    depth: 10
+    radius: 30
+    number: THREE
+    bearing:
+        radius: 4
+        spindle_radius: 7.3
+        number: TWO
+        """
+        config = WheelConfig(yaml)
+        assert config.bearing.spindle_radius == 7.3
+
+    def test_lower_config_node(self):
+        yaml = """
+wheelconfig:
+    depth: 10
+    radius: 30
+    number: THREE
+    bearing:
+        radius: 4
+        spindle_radius: 7.3
+        number: TWO
+        """
+        config = WheelConfig(yaml)
+        assert config.bearing.spindle_radius == 7.3

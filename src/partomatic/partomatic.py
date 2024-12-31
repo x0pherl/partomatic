@@ -81,12 +81,6 @@ class Partomatic(ABC):
             - configuration: the path to the configuration file
                 OR
               a valid yaml configuration string
-        -------
-        notes:
-            if yaml_tree is set in the PartomaticConfig descendent,
-            PartomaticConfig will use that tree to find a node deep
-            within the yaml tree, following the node names separated by slashes
-            (example: "BigObject/Partomatic")
         """
         self._config.load_config(configuration, **kwargs)
 
@@ -101,12 +95,6 @@ class Partomatic(ABC):
                 OR
               None (default) for an empty object
             - **kwargs: specific fields to set in the configuration
-        -------
-        notes:
-            you can assign yaml_tree as a kwarg here to load a
-            configuration from a node node deep within the yaml tree,
-            following the node names separated by slashes
-            (example: "BigObject/Partomatic")
         """
         self.parts = []
         # we have to call self.__class__.config so it can handle instanting

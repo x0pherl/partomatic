@@ -4,7 +4,7 @@ The first element of Partomatic is the PartomaticConfig class. Descending a clas
 
 PartomaticConfig makes it easy to load parametric values from Python parameters passed on instantiation, or through a YAML file -- you can even nest PartomaticConfig object definitions in a single YAML file.
 
-YAML was chosen because YAML files are easily human-readable without deep technical knowledge. As an example, imagine a simple model of a wheel with a cut in the center for a bearing. We'll define both the wheel and the bearing. A simple example of a YAML configuration for a wheel with a bearing axle might look like:
+YAML was chosen because YAML files are easily human-readable without deep technical knowledge. As an example, imagine a simple model of a wheel with a cut in the center for a bearing. We’ll define both the wheel and the bearing. A simple example of a YAML configuration for a wheel with a bearing axle might look like:
 
 ```
 wheel:
@@ -14,6 +14,18 @@ wheel:
         radius: 4
         spindle_radius: 1.5
 ```
+
+## YAML node Names
+Partomatic makes an attempt to identify the correct root node by searching in the following order:
+
+1. a node matching the lowercase classname, eliminating the string "Config" from the end of the classname. For example, a descendent class named `BearingConfig` would match the node `bearing:`
+2. a node matching the lowercase classname exactly, without eliminating the config name. For example, a descendent class named `BearingConfig` would match the node `bearingconfig:`
+3. a node matching the classname exactly, without eliminating the config name or changing the case. For example, a descendent class named `BearingConfig` would match the node `BearingConfig:`
+
+If a matching node is not found, a value error is raised when loading the yaml.
+
+## Example Implementation
+
 Now we can define PartomaticConfig objects for both the Wheel and the Bearing as follows:
 
 ```
@@ -21,26 +33,14 @@ from partomatic import PartomaticConfig
 from dataclasses import field
 
 class BearingConfig(PartomaticConfig):
-    yaml_tree: str = "wheel/bearing"
     radius: float = 10
     spindle_radius: float = 2
 
 class WheelConfig(PartomaticConfig):
-    yaml_tree = "wheel"
     depth: float = 2
     radius: float = 50
     bearing: BearingConfig = field(default_factory=BearingConfig)
 ```
-
-You may have noted a few things that aren't obvious given the YAML section above. Let's take a deeper look at yaml_tree and the field definition for the bearing.
-
-## yaml_tree
-
-The value `yaml_tree` defines the tree of the configuration within a file that you would like to load. For our example, not that "wheel" is the root object of our yaml file because our first line reads `wheel:`.
-
-Bearing is a sub element of that wheel object, because it is at the same indent level as `depth` and `radius`. Partomatic separates objects on the tree with the `/` character, so we define the bearing's `yaml_tree` as `wheel/bearing` so it could be loaded independently from the same file.
-
-Note that the yaml tree of the sub object is not _required_ to follow this pattern. In our sample case it makes it easy to load a bearing object from the same file as the wheel if only the bearing is required for some python files within our project. `yaml_tree` can also be passed when initializing the BearingConfig object, so it could be overwritten if appropriate.
 
 ## field factory
 
@@ -50,20 +50,20 @@ For PartomaticConfig, all you need to understand is that if you are nesting Part
 `<object_name>: <ObjectClass> = field(default_factory=<ObjectClass>)`
 Have a look again at the bearing field of the `WheelConfig` object for an example.
 
-## Instantiating a PartomaticConfig descendant
+# Instantiating a PartomaticConfig descendant
 
-Now that we've got the `WheelConfig` (and it's member class `BearingConfig`) defined we need to create an instance of `WheelConfig`. We can instantiate this in several ways:
+Now that we’ve got the `WheelConfig` (and its member class `BearingConfig`) defined we need to create an instance of `WheelConfig`. We can instantiate this in several ways:
 - default configuration
 - loading from a file
 - loading from a yaml string
 - defining parameters
 
-### Instantiating with default configuration
+## Instantiating with default configuration
 
-If you're happy with the default values for your wheel configuration (and its bearing), it couldn't be simpler to instantiate:
+If you’re happy with the default values for your wheel configuration (and its bearing), it couldn’t be simpler to instantiate:
 `wheel_config = WheelConfig()`
 
-### Instantiating by loading from a file
+## Instantiating by loading from a file
 
 Loading from a yaml file can make it easy to build multiple parts with different configurations.
 
@@ -73,9 +73,9 @@ Instantiating a Partomatic object from a yaml file is as simple as passing a fil
 `wheel_config = WheelConfig('~/wheel/config/base_wheel.yml')`
 
 
-### Instantiating with a yaml string
+## Instantiating with a yaml string
 
-If you've loaded a yaml string out of another object or from an environment variable, you can pass the entire yaml string instead of a filename as shown in this example:
+If you’ve loaded a yaml string out of another object or from an environment variable, you can pass the entire yaml string instead of a filename as shown in this example:
 ```
 wheel_yaml = """
 wheel:
@@ -88,7 +88,8 @@ wheel:
 wheel_config = WheelConfig(wheel_yaml)
 ```
 
-Remember that you can also load the object from anywhere in a `yaml_tree`; so if the `wheel` object is defined in a yaml tree for a parent object you could use that as follows:
+### Loading a nested yaml node
+You may need to load a PartomaticConfig object that is nested within a larger YAML context. In this example, the `wheel` object is defined within a `car` object, underneath of a `drivetrain` node. This can be loaded by using `yaml`’s `safe_load` method, and passing in the node paths as shown below:
 
 ```
 car_yaml = """
@@ -103,8 +104,32 @@ car:
                 radius: 4
                 spindle_radius: 1.5
 """
-wheel_config = WheelConfig(car_yaml, yaml_tree='car/drivetrain/wheel')
+
+wheel_config = WheelConfig(
+            {"wheel": yaml.safe_load(car_yaml)["car"]["drivetrain"]["wheel"]}
+        )
 ```
+note that in the instantiation, we had to define the dictionary ({}) with the key `wheel`.
+
+### Overriding a misnamed yaml node
+PartomaticConfig’s attempts to resolve the node name based on the class name may not always work. You can use a similar approach to the example above to "correct" the yaml node name so that your descendant class can load the file or string:
+
+```
+wheel_yaml = """
+pulley:
+    depth: 10
+    radius: 30
+    bearing:
+        radius: 4
+        spindle_radius: 1.5
+"""
+
+wheel_config = WheelConfig(
+            {"wheel": yaml.safe_load(car_yaml)["pulley"]}
+        )
+```
+note that we had to define the dictionary ({}) with the key `wheel` `wheelconfig` or `WheelConfig` would also have worked.
+
 
 ### Instantiating with parameters passed
 
@@ -137,4 +162,4 @@ In our example, where we are defining multiple wheel parts to support different 
 This works the same way as `file_prefix` (described above), but adds this string to the end of each generated file.
 
 ### `create_folders_if_missing`
-By default, Partomatic will create folders if they don't exist when exporting stl files. If you prefer it to only save parts if the folders already exist, you set this to `False`
+By default, Partomatic will create folders if they don’t exist when exporting stl files. If you prefer it to only save parts if the folders already exist, you set this to `False`
