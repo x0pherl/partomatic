@@ -1,7 +1,7 @@
 # AutomatablePart
 
 ## Overview
-AutomatablePart is a small wrapper around build123d's Part class that adds some useful additional data for generating parts in an automated context. These variables are members of the AutomatablePart class:
+AutomatablePart is a small wrapper around build123d’s Part class that adds some useful additional data for generating parts in an automated context. These variables are members of the AutomatablePart class:
 ```
     part: Part = field(default_factory=Part)
     display_location: Location = field(default_factory=Location)

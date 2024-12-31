@@ -6,7 +6,7 @@ Partomatic is an attempt to build an automatable ecosystem for generating parame
 
 In the software world, CI/CD technologies are taken for granted. They allow large-scale distributed systems to deploy updates automatically and smoothly. These systems allow an automated flow that takes updated code submitted by a developer, executes tests & validations, and then automated global deployment. Without these technologies the internet as we know it could not operate.
 
-3d Modeling tools are great at creating models, but they don't make it easy to deploy, generate, and distribute multiple parts. Build123d is a powerful library, but it leaves the creation of final parts up to the developer.
+3d Modeling tools are great at creating models, but they don’t make it easy to deploy, generate, and distribute multiple parts. Build123d is a powerful library, but it leaves the creation of final parts up to the developer.
 
 For a large project with many related and interlocking parts, this can make releasing a new version a project in and of itself. Partomatic allows for those designs to be parametric. For example, a wheel might support many different bearings, or come in multiple diameters or thicknesses. Instead of hard coding the saving of each of those STL files, Partomatic allows you to define parameters and file-naming instructions to allow a relatively simple build script to read through multiple configuration files and save each of those STL files in a folder structure and file-naming standard that you define.
 
