@@ -28,4 +28,6 @@ and understand how this represents these related parts
 
 ## Partomatic Components
 There are 3 primary components to the partomatic library:
-- [AutomatablePart](automatable_part.md) — This dataclass represents a
+- [AutomatablePart](automatable_part.md) — This dataclass represents a build123d part with augmentation to control the location of the part as well as the file name
+- [PartomaticConfig](partomatic_config.md) — This dataclass handles loading parameters from yaml strings or files.
+- [Partomatic](partomatic.md) — This is the base class for generating, displaying, and exporting 3d objects based on the parameters loaded in the _config member variable, which is a `PartomaticConfig` object.
