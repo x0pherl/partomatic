@@ -1,7 +1,8 @@
 import sys
 import os
 import pytest
-from pathlib import Path
+from tempfile import TemporaryDirectory
+
 
 sys.path.insert(
     0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src"))
@@ -10,9 +11,9 @@ sys.path.insert(
 
 @pytest.fixture
 def wheel_config_yaml():
-    return """
+    return f"""
 wheel:
-    stl_folder: "
+    stl_folder: {TemporaryDirectory().name}
     depth: 10
     radius: 30
     number: THREE
