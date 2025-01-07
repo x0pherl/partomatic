@@ -1,6 +1,7 @@
 import sys
 import os
 import pytest
+from pathlib import Path
 
 sys.path.insert(
     0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src"))
@@ -11,6 +12,7 @@ sys.path.insert(
 def wheel_config_yaml():
     return """
 wheel:
+    stl_folder: "
     depth: 10
     radius: 30
     number: THREE

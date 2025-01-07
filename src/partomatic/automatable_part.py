@@ -10,12 +10,31 @@ from build123d import Part, Location
 
 @dataclass
 class AutomatablePart:
+    """A dataclass that contains a Part object and additional information for
+    saving and displaying the part
+    ----------
+    Arguments:
+        - part: Part object to be saved and displayed
+        - display_location: Location object to be used for displaying the part
+        - stil_folder:
+    """
+
     part: Part = field(default_factory=Part)
     display_location: Location = field(default_factory=Location)
     stl_folder: str = getcwd()
     _file_name_base: str = "partomatic"
 
     def __init__(self, part, file_name_base, **kwargs):
+        """Initializes the AutomatablePart object
+        ----------
+        Arguments:
+            - part: Part object to be saved and displayed
+            - file_name_base: the base name of the part -- determines the name of an
+            exported file when combined with the stl_folder and any suffixes and prefixes added
+            - display_location (optional): Location object to be used for displaying the part
+            - stil_folder (optional): the folder where the stl file will be saved. if not specified,
+            the current working directory will be used
+        """
         self.display_location = Location()
         self.file_name_base = file_name_base
         self.part = part
