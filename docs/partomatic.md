@@ -60,3 +60,16 @@ The `display` method will display each AutomatablePart in the `parts` list in th
  #### `partomate`
 
  `partomate` is a convenience function that will execute the `compile` and `export_stls` functions of the Partomatic descendant.
+
+### Partomatic logging
+
+Partomatic logs to the "partomatic" namespace; you can capture and handle partomatic logs easily:
+
+```
+logger = logging.getLogger("partomatic")
+logger.setLevel(logging.DEBUG)
+logger.addHandler(logging.StreamHandler(stdout))
+
+foo = Wheel()
+foo._config.stl_folder = "NONE"
+foo.partomate()```

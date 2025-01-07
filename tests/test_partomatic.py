@@ -1,11 +1,15 @@
 from dataclasses import dataclass, field
 from enum import Enum, auto
+from _pytest.logging import caplog
 import pytest
 from unittest.mock import patch
 from pathlib import Path
 
 from partomatic import AutomatablePart, PartomaticConfig, Partomatic
 from build123d import BuildPart, Box, Part, Sphere, Align, Mode, Location
+
+import logging
+from sys import stdout
 
 
 class FakeEnum(Enum):
@@ -24,7 +28,6 @@ class ContainerConfig(PartomaticConfig):
     sub: SubConfig = field(default_factory=SubConfig)
 
 
-@dataclass
 class WidgetConfig(PartomaticConfig):
     stl_folder: str = field(default="C:\\Users\\xopher\\Downloads")
     radius: float = field(default=10)
@@ -67,7 +70,7 @@ class Widget(Partomatic):
 
 class TestPartomatic:
 
-    def test_partomatic_class(self):
+    def test_partomatic_class(self, caplog):
         wc = WidgetConfig()
         assert wc.stl_folder == "C:\\Users\\xopher\\Downloads"
         foo = Widget(wc)
@@ -85,8 +88,10 @@ class TestPartomatic:
             foo.partomate()
         foo._config.stl_folder = "NONE"
         foo.export_stls()
+        assert len(caplog.records) > 0
 
-    def test_bad_stl_output_folder(self):
+    def test_bad_stl_output_folder(self, caplog):
+        logging.getLogger("partomatic").addHandler(logging.StreamHandler())
         foo = Widget(stl_folder="/bad/path")
         assert foo._config.stl_folder == "/bad/path"
         with (
@@ -100,3 +105,5 @@ class TestPartomatic:
             foo.display()
             with pytest.raises(FileNotFoundError):
                 foo.partomate()
+        assert "does not exist" in caplog.records[-1].message
+        assert "Directory" in caplog.records[-1].message

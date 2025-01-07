@@ -1,14 +1,14 @@
 """Part extended for CI/CD automation"""
 
-from dataclasses import dataclass, field, fields, is_dataclass, MISSING
+from dataclasses import field
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from build123d import Part, Location, export_stl
+from build123d import Location, export_stl
 
 import ocp_vscode
 
-import yaml
+import logging
 
 from .partomatic_config import PartomaticConfig
 from .automatable_part import AutomatablePart
@@ -59,18 +59,23 @@ class Partomatic(ABC):
         folder
         """
         if self._config.stl_folder == "NONE":
+            logging.getLogger("partomatic").warning(
+                "stl_folder is set to NONE, skipping stl export"
+            )
             return
         for part in self.parts:
-            Path(self.complete_stl_file_path(part)).parent.mkdir(
-                parents=True, exist_ok=self._config.create_folders_if_missing
-            )
+            if not Path(self.complete_stl_file_path(part)).parent.exists():
+                Path(self.complete_stl_file_path(part)).parent.mkdir(
+                    parents=True,
+                    exist_ok=self._config.create_folders_if_missing,
+                )
             if (
                 not Path(self.complete_stl_file_path(part)).parent.exists()
                 or not Path(self.complete_stl_file_path(part)).parent.is_dir()
             ):
-                raise FileNotFoundError(
-                    f"Directory {Path(self.complete_stl_file_path(part)).parent} does not exist"
-                )
+                error_str = f"Directory {Path(self.complete_stl_file_path(part)).parent} does not exist."
+                logging.getLogger("partomatic").warning(error_str)
+                raise FileNotFoundError(error_str)
             export_stl(part.part, self.complete_stl_file_path(part))
 
     def load_config(self, configuration: any, **kwargs):
@@ -82,6 +87,9 @@ class Partomatic(ABC):
                 OR
               a valid yaml configuration string
         """
+        logging.getLogger("partomatic").debug(
+            f"loading {configuration} with kwargs: {kwargs}"
+        )
         self._config.load_config(configuration, **kwargs)
 
     def __init__(self, configuration: any = None, **kwargs):
