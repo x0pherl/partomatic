@@ -1,3 +1,4 @@
+__package__ = "partomatic"
 """Part extended for CI/CD automation"""
 
 from dataclasses import dataclass, field, fields, is_dataclass, MISSING

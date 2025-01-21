@@ -1,3 +1,4 @@
+__package__ = "partomatic"
 """AutomatablePart is a dataclass that contains a Part object and additional inormation for saving and
 displaying the part"""
 

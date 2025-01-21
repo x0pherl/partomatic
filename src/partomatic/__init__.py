@@ -1,3 +1,3 @@
-from .partomatic import Partomatic
-from .automatable_part import AutomatablePart
-from .partomatic_config import PartomaticConfig
+from partomatic.partomatic import *
+from partomatic.automatable_part import *
+from partomatic.partomatic_config import *

@@ -1,3 +1,5 @@
+__package__ = "partomatic"
+
 """Part extended for CI/CD automation"""
 
 from dataclasses import field
@@ -10,8 +12,8 @@ import ocp_vscode
 
 import logging
 
-from .partomatic_config import PartomaticConfig
-from .automatable_part import AutomatablePart
+from partomatic.partomatic_config import PartomaticConfig
+from partomatic.automatable_part import AutomatablePart
 
 
 class Partomatic(ABC):
