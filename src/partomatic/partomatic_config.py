@@ -111,8 +111,10 @@ class PartomaticConfig(metaclass=AutoDataclassMeta):
                             setattr(self, key, classfield.type(**value))
                         else:
                             setattr(self, key, value)
-                    elif isinstance(classfield.type, type) and issubclass(
-                        classfield.type, (Enum, Flag)
+                    elif (
+                        (not isinstance(value, classfield.type))
+                        and isinstance(classfield.type, type)
+                        and issubclass(classfield.type, (Enum, Flag))
                     ):
                         setattr(
                             self,

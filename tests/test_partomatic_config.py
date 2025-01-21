@@ -162,3 +162,7 @@ wheelconfig:
         """
         config = WheelConfig(yaml)
         assert config.bearing.spindle_radius == 7.3
+
+    def test_enum_kwarg(self):
+        config = WheelConfig(number=FakeEnum.THREE)
+        assert config.number == FakeEnum.THREE
