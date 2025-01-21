@@ -18,6 +18,7 @@ GOTO END
 
 :BUILD
 py -m pip uninstall -y %PROJECT_NAME%
+del /F /Q dist\*.*
 
 py -m build
 py -m pip install -e .
