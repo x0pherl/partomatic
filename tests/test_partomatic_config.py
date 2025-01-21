@@ -163,6 +163,20 @@ wheelconfig:
         config = WheelConfig(yaml)
         assert config.bearing.spindle_radius == 7.3
 
+    def test_lower_configless_node(self):
+        yaml = """
+Wheel:
+    depth: 10
+    radius: 30
+    number: THREE
+    bearing:
+        radius: 4
+        spindle_radius: 7.3
+        number: TWO
+        """
+        config = WheelConfig(yaml)
+        assert config.bearing.spindle_radius == 7.3
+
     def test_enum_kwarg(self):
         config = WheelConfig(number=FakeEnum.THREE)
         assert config.number == FakeEnum.THREE

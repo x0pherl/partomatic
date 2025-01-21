@@ -33,7 +33,7 @@ class PartomaticConfig(metaclass=AutoDataclassMeta):
         name = self.__class__.__name__
         if name.lower().endswith("config"):
             name = name[:-6]
-        return name.lower()
+        return name
 
     def _default_config(self):
         """
@@ -74,7 +74,9 @@ class PartomaticConfig(metaclass=AutoDataclassMeta):
             elif self.__class__.__name__.lower() in bracket_dict:
                 bracket_dict = bracket_dict[self.__class__.__name__.lower()]
             elif self._clean_config_class_name.lower() in bracket_dict:
-                bracket_dict = bracket_dict[self._clean_config_class_name]
+                bracket_dict = bracket_dict[
+                    self._clean_config_class_name.lower()
+                ]
             else:
                 raise ValueError(
                     f"Configuration file does not contain a node for {self.__class__.__name__}"
