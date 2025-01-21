@@ -67,12 +67,14 @@ class PartomaticConfig(metaclass=AutoDataclassMeta):
                 if path.exists() and path.is_file():
                     configuration = path.read_text()
             bracket_dict = yaml.safe_load(configuration)
-            if self._clean_config_class_name in bracket_dict:
+            if self.__class__.__name__ in bracket_dict:
+                bracket_dict = bracket_dict[self.__class__.__name__]
+            elif self._clean_config_class_name in bracket_dict:
                 bracket_dict = bracket_dict[self._clean_config_class_name]
             elif self.__class__.__name__.lower() in bracket_dict:
                 bracket_dict = bracket_dict[self.__class__.__name__.lower()]
-            elif self.__class__.__name__ in bracket_dict:
-                bracket_dict = bracket_dict[self.__class__.__name__]
+            elif self._clean_config_class_name.lower() in bracket_dict:
+                bracket_dict = bracket_dict[self._clean_config_class_name]
             else:
                 raise ValueError(
                     f"Configuration file does not contain a node for {self.__class__.__name__}"
