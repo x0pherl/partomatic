@@ -24,7 +24,7 @@ py -m build
 py -m pip install -e .
 
 :TESTLOCAL
-python -c "exec(\"from fb_library import dovetail_subpart, click_fit, Point, shifted_midpoint\nprint(shifted_midpoint(Point(0,0), Point(10,10),0))\")"
+python -c "exec(\"from partomatic import Partomatic, PartomaticConfig, AutomatablePart\nprint(PartomaticConfig().stl_folder)\")"
 
 
 SET /P PYPI_UPLOAD=Based on that simple test, upload to pypi? ([Y]/N)?
