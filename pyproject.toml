@@ -1,6 +1,6 @@
 [project]
 name = "partomatic"
-version = "0.3.4"
+version = "0.3.5"
 authors = [
   { name="x0pherl"},
 ]
@@ -14,8 +14,8 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/x0pher/partomatic"
-Issues = "https://github.com/x0pher/partomatic/issues"
+Homepage = "https://github.com/x0pherl/partomatic"
+Issues = "https://github.com/x0pherl/partomatic/issues"
 Documentation = "https://partomatic.readthedocs.org"
 
 [build-system]
