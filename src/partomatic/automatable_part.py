@@ -25,15 +25,15 @@ class AutomatablePart:
     stl_folder: str = getcwd()
     _file_name_base: str = "partomatic"
 
-    def __init__(self, part, file_name_base, **kwargs):
+    def __init__(self, part: Part, file_name_base: str, **kwargs):
         """Initializes the AutomatablePart object
         ----------
         Arguments:
-            - part: Part object to be saved and displayed
-            - file_name_base: the base name of the part -- determines the name of an
+            - part (Part): Part object to be saved and displayed
+            - file_name_base (str): the base name of the part -- determines the name of an
             exported file when combined with the stl_folder and any suffixes and prefixes added
-            - display_location (optional): Location object to be used for displaying the part
-            - stil_folder (optional): the folder where the stl file will be saved. if not specified,
+            - display_location (Location, optional): Location object to be used for displaying the part
+            - stl_folder (str, optional): the folder where the stl file will be saved. if not specified,
             the current working directory will be used
         """
         self.display_location = Location()
