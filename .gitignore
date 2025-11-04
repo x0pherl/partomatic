@@ -7,7 +7,7 @@ __pycache__/
 .DS_Store
 
 #ignore vscode settings
-.vscode
+.vscode/
 
 # C extensions
 *.so
