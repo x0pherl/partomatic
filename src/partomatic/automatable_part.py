@@ -15,9 +15,9 @@ class AutomatablePart:
     saving and displaying the part
     ----------
     Arguments:
-        - part: Part object to be saved and displayed
-        - display_location: Location object to be used for displaying the part
-        - stil_folder:
+        - part (Part): Part object to be saved and displayed
+        - display_location (Location, optional): Location object to be used for displaying the part
+        - stl_folder (str, optional): Folder where the STL file will be saved.
     """
 
     part: Part = field(default_factory=Part)
@@ -25,7 +25,13 @@ class AutomatablePart:
     stl_folder: str = getcwd()
     _file_name_base: str = "partomatic"
 
-    def __init__(self, part: Part, file_name_base: str, **kwargs):
+    def __init__(
+        self,
+        part: Part,
+        file_name_base: str,
+        display_location: Location | None = None,
+        stl_folder: str | None = None,
+    ):
         """Initializes the AutomatablePart object
         ----------
         Arguments:
@@ -39,12 +45,10 @@ class AutomatablePart:
         self.display_location = Location()
         self.file_name_base = file_name_base
         self.part = part
-        if "display_location" in kwargs:
-            display_location = kwargs["display_location"]
-            if isinstance(display_location, Location):
-                self.display_location = display_location
-        if "stl_folder" in kwargs:
-            self.stl_folder = kwargs["stl_folder"]
+        if display_location is not None and isinstance(display_location, Location):
+            self.display_location = display_location
+        if stl_folder is not None and isinstance(stl_folder, str):
+            self.stl_folder = stl_folder
 
     @property
     def file_name_base(self) -> str:
