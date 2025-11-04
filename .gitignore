@@ -3,6 +3,12 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+#ignore MacOS folder store
+.DS_Store
+
+#ignore vscode settings
+.vscode
+
 # C extensions
 *.so
 
