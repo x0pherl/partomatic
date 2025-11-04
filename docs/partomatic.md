@@ -51,7 +51,7 @@ The `display` method will display each AutomatablePart in the `parts` list in th
 
 #### `export_stls`
 
- This method calculates the appropriate file path based on the descendant class’ `stl_folder`, `file_prefix`, the `AutomatablePart`’s `file_name_base` and the `file_prefix` and `file_suffix`. If `create_folders_if_missing` is set to False, no part will be saved if the file is not present.
+ This method calculates the appropriate file path based on the descendant class’ `stl_folder`, `file_prefix`, the `AutomatablePart`’s `file_name_base` and the `file_prefix` and `file_suffix`. If `create_folders_if_missing` is set to False, no part will be saved if the folder is not present.
 
  #### `load_config`
 

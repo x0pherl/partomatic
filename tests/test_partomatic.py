@@ -62,8 +62,6 @@ class Widget(Partomatic):
                 "test",
                 display_location=Location((9, 0, 9)),
                 stl_folder=str(Path(self._config.stl_folder) / "stls"),
-                step_folder=str(Path(self._config.stl_folder) / "steps"),
-                create_folders=True,
             )
         )
 
