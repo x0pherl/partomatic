@@ -4,6 +4,7 @@ __package__ = "partomatic"
 
 from dataclasses import field
 from abc import ABC, abstractmethod
+import inspect
 from pathlib import Path
 
 from build123d import Location, export_stl
@@ -38,19 +39,17 @@ class Partomatic(ABC):
         Shows the relevant parts in OCP CAD Viewer
         """
         ocp_vscode.show(
-            (
-                [
-                    part.part.move(Location(part.display_location))
-                    for part in self.parts
-                ]
-            ),
+            ([part.part.move(Location(part.display_location)) for part in self.parts]),
             reset_camera=ocp_vscode.Camera.KEEP,
         )
 
     def complete_stl_file_path(self, part: AutomatablePart) -> str:
+        stl_path = Path(part.stl_folder)
+        if not stl_path.is_absolute():
+            stl_path = self._source_dir / stl_path
         return str(
-            Path(
-                Path(part.stl_folder)
+            (
+                stl_path
                 / f"{self._config.file_prefix}{part.file_name_base}{self._config.file_suffix}"
             ).with_suffix(".stl")
         )
@@ -111,6 +110,7 @@ class Partomatic(ABC):
         # the descendant class of PartomaticConfig instead of using the generic
         # parent implementation
         self._config = self.__class__._config
+        self._source_dir = Path(inspect.getfile(self.__class__)).parent
         self.load_config(configuration, **kwargs)
 
     def partomate(self):
