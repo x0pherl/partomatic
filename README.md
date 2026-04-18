@@ -12,6 +12,16 @@ For a large project with many related and interlocking parts, this can make rele
 
 [Partomatic](https://github.com/x0pherl/partomatic) enables _parametric modeling_ and standardizes some _build automation_ for a part.
 
+## Installation
+
+Install partomatic using pip:
+
+```bash
+pip install partomatic
+```
+
+This will automatically install partomatic and its dependencies.
+
 ## Parametric Modeling
 Parametric 3D modeling is a method of creating 3D models where the geometry is defined by parameters, allowing for easy adjustment by simply changing the values of these parameters. This approach enables the creation of flexible and reusable designs that can be quickly adapted to different requirements.
 
