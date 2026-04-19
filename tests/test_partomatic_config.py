@@ -53,15 +53,33 @@ class TestPartomaticConfig:
         mock_file_path = "mock_wheel_config.yaml"
         with patch.object(Path, "exists", return_value=True):
             with patch.object(Path, "is_file", return_value=True):
-                with patch.object(
-                    Path, "read_text", return_value=wheel_config_yaml
-                ):
+                with patch.object(Path, "read_text", return_value=wheel_config_yaml):
                     config = WheelConfig(mock_file_path)
                     assert config.depth == 10
                     assert config.radius == 30
                     assert config.bearing.__class__ == BearingConfig
                     assert config.bearing.radius == 4
                     assert config.bearing.spindle_radius == 1.5
+
+    def test_post_init(self):
+        from partomatic import PartomaticConfig
+        from dataclasses import field
+
+        class ChildConfig(PartomaticConfig):
+            component_value: float = 5
+            derived_value: float = None
+
+        class ParentConfig(PartomaticConfig):
+            parent_value: float = 20
+            child: ChildConfig = field(default_factory=ChildConfig)
+
+        def __post_init__(self):
+            self.child.derived_value = self.parent_value / self.child.component_value
+
+        child = ChildConfig()
+        print(child.derived_value)
+        parent = ParentConfig()
+        print(parent.child.derived_value)
 
     def test_instantiating_with_object(self, wheel_config_yaml):
         base_wheel = WheelConfig(wheel_config_yaml)
@@ -109,9 +127,7 @@ car:
 
     def test_passed_params(self):
         bearing_config = BearingConfig(radius=20.6, spindle_radius=10)
-        wheel_config = WheelConfig(
-            depth=5, radius=50.2, bearing=bearing_config
-        )
+        wheel_config = WheelConfig(depth=5, radius=50.2, bearing=bearing_config)
         assert wheel_config.bearing.radius == 20.6
         assert wheel_config.radius == 50.2
 

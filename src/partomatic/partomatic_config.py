@@ -69,14 +69,12 @@ class PartomaticConfig(metaclass=AutoDataclassMeta):
             bracket_dict = yaml.safe_load(configuration)
             if self.__class__.__name__ in bracket_dict:
                 bracket_dict = bracket_dict[self.__class__.__name__]
-            elif self._clean_config_class_name in bracket_dict:
-                bracket_dict = bracket_dict[self._clean_config_class_name]
             elif self.__class__.__name__.lower() in bracket_dict:
                 bracket_dict = bracket_dict[self.__class__.__name__.lower()]
+            elif self._clean_config_class_name in bracket_dict:
+                bracket_dict = bracket_dict[self._clean_config_class_name]
             elif self._clean_config_class_name.lower() in bracket_dict:
-                bracket_dict = bracket_dict[
-                    self._clean_config_class_name.lower()
-                ]
+                bracket_dict = bracket_dict[self._clean_config_class_name.lower()]
             else:
                 raise ValueError(
                     f"Configuration file does not contain a node for {self.__class__.__name__}"
@@ -93,9 +91,7 @@ class PartomaticConfig(metaclass=AutoDataclassMeta):
                             classfield.name,
                             classfield.type[value.upper()],
                         )
-                    elif is_dataclass(classfield.type) and isinstance(
-                        value, dict
-                    ):
+                    elif is_dataclass(classfield.type) and isinstance(value, dict):
                         setattr(
                             self,
                             classfield.name,
@@ -144,3 +140,7 @@ class PartomaticConfig(metaclass=AutoDataclassMeta):
             self.load_config(configuration=configuration, **kwargs)
         else:
             self._default_config()
+        self.__post_init__()
+
+    def __post_init__(self):
+        pass
