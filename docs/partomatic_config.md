@@ -159,6 +159,16 @@ wheel_config = WheelConfig()
 back_wheel_config = WheelConfig(wheel_config)
 ```
 
+When both a configuration input (file path, YAML string, or config object) and explicit keyword arguments are passed, keyword arguments take precedence for matching fields.
+
+## Exporting Configuration Data
+
+PartomaticConfig provides helper methods to serialize the current configuration:
+
+1. as_dict(): returns a plain Python dictionary with enum values serialized by name.
+2. to_yaml(root_node=None): returns a YAML string wrapped in the selected root node.
+3. save_yaml(path, root_node=None): writes that YAML output to a file.
+
 ## Configuration Files
 
 PartomaticConfig makes it easy to load parametric values from a YAML file -- you can even nest PartomaticConfig object definitions in a single YAML file.

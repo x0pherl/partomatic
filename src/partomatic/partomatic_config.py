@@ -1,21 +1,35 @@
 __package__ = "partomatic"
 """Part extended for CI/CD automation"""
 
-from dataclasses import dataclass, field, fields, is_dataclass, MISSING
+from dataclasses import field, fields, is_dataclass, MISSING
 from enum import Enum, Flag
 from pathlib import Path
 
+from pydantic.dataclasses import dataclass as pydantic_dataclass
 import yaml
+
+from partomatic.partomatic_config_editor import PartomaticConfigEditorMixin
 
 
 class AutoDataclassMeta(type):
     def __new__(cls, name, bases, dct):
+        original_init = dct.get("__init__")
         new_cls = super().__new__(cls, name, bases, dct)
-        return dataclass(init=False)(new_cls)
+        new_cls = pydantic_dataclass(kw_only=True)(new_cls)
+
+        if original_init is not None:
+            new_cls.__init__ = original_init
+        else:
+            for base in bases:
+                inherited_init = getattr(base, "__init__", None)
+                if inherited_init and inherited_init is not object.__init__:
+                    new_cls.__init__ = inherited_init
+                    break
+
+        return new_cls
 
 
-@dataclass
-class PartomaticConfig(metaclass=AutoDataclassMeta):
+class PartomaticConfig(PartomaticConfigEditorMixin, metaclass=AutoDataclassMeta):
     stl_folder: str = "NONE"
     file_prefix: str = ""
     file_suffix: str = ""
