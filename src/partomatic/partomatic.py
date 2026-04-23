@@ -15,9 +15,10 @@ import logging
 
 from partomatic.partomatic_config import PartomaticConfig
 from partomatic.automatable_part import AutomatablePart
+from partomatic.partomatic_preview import PartomaticPreviewMixin
 
 
-class Partomatic(ABC):
+class Partomatic(PartomaticPreviewMixin, ABC):
     """
     Partomatic is an extension of the Compound class from build123d
     that allows for automation within a continuous integration
@@ -39,8 +40,7 @@ class Partomatic(ABC):
         Shows the relevant parts in OCP CAD Viewer
         """
         ocp_vscode.show(
-            ([part.part.move(Location(part.display_location)) for part in self.parts]),
-            reset_camera=ocp_vscode.Camera.KEEP,
+            ([part.part.move(Location(part.display_location)) for part in self.parts])
         )
 
     def complete_stl_file_path(self, part: AutomatablePart) -> str:
@@ -111,6 +111,7 @@ class Partomatic(ABC):
         # parent implementation
         self._config = self.__class__._config
         self._source_dir = Path(inspect.getfile(self.__class__)).parent
+        self._init_preview_state()
         self.load_config(configuration, **kwargs)
 
     def partomate(self):
@@ -123,3 +124,36 @@ class Partomatic(ABC):
         """
         self.compile()
         self.export_stls()
+
+
+if __name__ == "__main__":
+    from build123d import BuildPart, Box, Sphere, Mode
+
+    class DemoConfig(PartomaticConfig):
+        stl_folder: str = "NONE"
+        size: float = 20.0
+
+    class DemoPart(Partomatic):
+        _config: DemoConfig = DemoConfig()
+
+        def compile(self):
+            self.parts.clear()
+            with BuildPart() as cube:
+                Box(
+                    self._config.size,
+                    self._config.size,
+                    self._config.size,
+                )
+                Sphere(self._config.size * 0.6, mode=Mode.SUBTRACT)
+            self.parts.append(
+                AutomatablePart(
+                    cube.part,
+                    "demo-cube",
+                    display_location=Location(),
+                    stl_folder=self._config.stl_folder,
+                )
+            )
+
+    print("Starting Partomatic preview demo.")
+    demo = DemoPart()
+    demo.launch_preview(viewer_host="127.0.0.1", viewer_port=3939)

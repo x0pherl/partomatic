@@ -105,3 +105,19 @@ class TestPartomatic:
                 foo.partomate()
         assert "does not exist" in caplog.records[-1].message
         assert "Directory" in caplog.records[-1].message
+
+    def test_main_block(self):
+        from unittest.mock import patch
+        import runpy
+        from pathlib import Path
+
+        script = str(Path(__file__).parents[1] / "src/partomatic/partomatic.py")
+
+        def fake_launch(self, **kwargs):
+            self.compile()
+
+        with patch(
+            "partomatic.partomatic_preview.PartomaticPreviewMixin.launch_preview",
+            fake_launch,
+        ):
+            runpy.run_path(script, run_name="__main__")
