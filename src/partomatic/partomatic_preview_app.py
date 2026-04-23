@@ -5,7 +5,6 @@ import threading
 from urllib.parse import urlparse, urlunparse
 from pathlib import Path
 
-import ocp_vscode
 from nicegui import ui
 
 
@@ -67,6 +66,7 @@ def _ensure_viewer_running(viewer_url: str):
 def run_preview(partomatic, spec: dict, host: str = "localhost", port: int = 8503):
     class_name = spec.get("class_name", "Partomatic")
     viewer_url = spec.get("viewer_url", "http://127.0.0.1:3939")
+    embed_url = _viewer_embed_url(viewer_url)
     _ensure_viewer_running(viewer_url)
 
     def build_ui():
@@ -75,15 +75,16 @@ def run_preview(partomatic, spec: dict, host: str = "localhost", port: int = 850
 
             with ui.card().classes("w-full"):
                 ui.element("iframe").props(
-                    f'src="{viewer_url}" title="OCP Viewer"'
+                    f'src="{embed_url}" title="OCP Viewer"'
                 ).style("width:100%;height:70vh;border:0;").classes("w-full")
 
         def render_model():
             try:
                 partomatic.compile_for_preview()
-                partomatic.display(reset_camera=ocp_vscode.Camera.RESET)
-            except Exception:
-                pass
+                partomatic.display()
+            except Exception as ex:
+                partomatic._preview_state = PreviewState.ERROR
+                partomatic._preview_error = str(ex)
 
         ui.timer(1.5, render_model, once=True)
 
