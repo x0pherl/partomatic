@@ -110,8 +110,12 @@ class TestPartomatic:
         from unittest.mock import patch
         import runpy
         from pathlib import Path
+        import os
+        import sys
 
         script = str(Path(__file__).parents[1] / "src/partomatic/partomatic.py")
+        src_root = str(Path(script).resolve().parents[1])
+        pruned_sys_path = [p for p in sys.path if os.path.abspath(p) != src_root]
 
         def fake_launch(self, **kwargs):
             self.compile()
@@ -119,5 +123,6 @@ class TestPartomatic:
         with patch(
             "partomatic.partomatic_preview.PartomaticPreviewMixin.launch_preview",
             fake_launch,
-        ):
+        ), patch.object(sys, "path", pruned_sys_path):
             runpy.run_path(script, run_name="__main__")
+            assert sys.path[0] == src_root

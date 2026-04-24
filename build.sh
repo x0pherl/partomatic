@@ -11,6 +11,7 @@ PYPI_WAIT_TIME=30
 read -p "Do you want to run pytest --cov ([Y]/N)? " PYTEST_CHOSEN
 PYTEST_CHOSEN=${PYTEST_CHOSEN:-Y}
 if [[ "$PYTEST_CHOSEN" =~ ^[Yy]$ ]]; then
+    pip3 install -e .
     pytest --cov
     read -p "Based on the pytest results, proceed with the build? ([Y]/N)? " PYTEST_CLEAN
     PYTEST_CLEAN=${PYTEST_CLEAN:-Y}
