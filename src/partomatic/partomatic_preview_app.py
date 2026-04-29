@@ -1,30 +1,27 @@
-"""NiceGUI preview shell for Partomatic objects."""
+"""OCP standalone-viewer utilities shared by preview and configurator."""
 
+import asyncio
+import logging
 import socket
 import threading
+import time
 from urllib.parse import urlparse, urlunparse
-from pathlib import Path
 
-from nicegui import ui
-
-
-from partomatic.partomatic_preview import PreviewState
-
-
+_log = logging.getLogger("partomatic")
 _viewer_threads: dict[str, threading.Thread] = {}
 
 
 def _viewer_embed_url(viewer_url: str) -> str:
+    """Return iframe-friendly viewer URL, appending `/viewer` when needed."""
     parsed = urlparse(viewer_url)
     path = parsed.path or ""
-
     if path in ("", "/"):
         return urlunparse(parsed._replace(path="/viewer"))
-
     return viewer_url
 
 
 def _is_endpoint_reachable(host: str, port: int, timeout: float = 0.25) -> bool:
+    """Return whether a TCP endpoint is reachable within timeout."""
     try:
         with socket.create_connection((host, port), timeout=timeout):
             return True
@@ -33,6 +30,7 @@ def _is_endpoint_reachable(host: str, port: int, timeout: float = 0.25) -> bool:
 
 
 def _start_ocp_viewer(host: str, port: int):
+    """Start standalone OCP viewer thread unless already running."""
     key = f"{host}:{port}"
     existing = _viewer_threads.get(key)
     if existing is not None and existing.is_alive():
@@ -41,10 +39,16 @@ def _start_ocp_viewer(host: str, port: int):
     def run_server():
         from ocp_vscode.standalone import Viewer
 
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         try:
             Viewer({"host": host, "port": port}).start()
         except SystemExit:
-            return
+            pass
+        except Exception:
+            _log.exception("OCP standalone viewer on %s:%s failed to start", host, port)
+        finally:
+            loop.close()
 
     thread = threading.Thread(
         target=run_server,
@@ -55,37 +59,25 @@ def _start_ocp_viewer(host: str, port: int):
     _viewer_threads[key] = thread
 
 
-def _ensure_viewer_running(viewer_url: str):
+def _ensure_viewer_running(
+    viewer_url: str, wait_timeout: float = 10.0, poll_interval: float = 0.2
+):
+    """Ensure standalone viewer is reachable, starting it if necessary."""
     parsed = urlparse(viewer_url)
     host = parsed.hostname or "127.0.0.1"
     port = parsed.port or 3939
-    if not _is_endpoint_reachable(host, port):
-        _start_ocp_viewer(host, port)
-
-
-def run_preview(partomatic, spec: dict, host: str = "localhost", port: int = 8503):
-    class_name = spec.get("class_name", "Partomatic")
-    viewer_url = spec.get("viewer_url", "http://127.0.0.1:3939")
-    embed_url = _viewer_embed_url(viewer_url)
-    _ensure_viewer_running(viewer_url)
-
-    def build_ui():
-        with ui.column().classes("w-full max-w-7xl mx-auto p-6 gap-4"):
-            ui.label(f"{class_name} Preview").classes("text-3xl font-medium")
-
-            with ui.card().classes("w-full"):
-                ui.element("iframe").props(
-                    f'src="{embed_url}" title="OCP Viewer"'
-                ).style("width:100%;height:70vh;border:0;").classes("w-full")
-
-        def render_model():
-            try:
-                partomatic.compile_for_preview()
-                partomatic.display()
-            except Exception as ex:
-                partomatic._preview_state = PreviewState.ERROR
-                partomatic._preview_error = str(ex)
-
-        ui.timer(1.5, render_model, once=True)
-
-    ui.run(host=host, port=port, reload=False, show=False, root=build_ui)
+    if _is_endpoint_reachable(host, port):
+        return
+    _start_ocp_viewer(host, port)
+    deadline = time.monotonic() + wait_timeout
+    while time.monotonic() < deadline:
+        if _is_endpoint_reachable(host, port):
+            _log.info("OCP viewer ready at %s:%s", host, port)
+            return
+        time.sleep(poll_interval)
+    _log.warning(
+        "OCP viewer at %s:%s did not become reachable within %.1fs",
+        host,
+        port,
+        wait_timeout,
+    )

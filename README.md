@@ -22,6 +22,18 @@ pip install partomatic
 
 This will automatically install partomatic and its dependencies.
 
+If you want browser-based configuration/preview UIs, install optional web UI extras:
+
+```bash
+pip install partomatic[webui]
+```
+
+For the standalone configuration editor only, you can also use:
+
+```bash
+pip install partomatic[gui]
+```
+
 ## Parametric Modeling
 Parametric 3D modeling is a method of creating 3D models where the geometry is defined by parameters, allowing for easy adjustment by simply changing the values of these parameters. This approach enables the creation of flexible and reusable designs that can be quickly adapted to different requirements.
 
@@ -41,3 +53,7 @@ There are 3 primary components to the partomatic library:
 - [AutomatablePart](automatable_part.md) — This dataclass represents a build123d part with augmentation to control the location of the part as well as the file name
 - [PartomaticConfig](partomatic_config.md) — This dataclass handles loading parameters from yaml strings or files.
 - [Partomatic](partomatic.md) — This is the base class for generating, displaying, and exporting 3d objects based on the parameters loaded in the _config member variable, which is a `PartomaticConfig` object.
+
+`Partomatic` also provides runtime helpers for interactive workflows:
+- `launch_preview(viewer_host="127.0.0.1", viewer_port=3939)` compiles and displays parts in OCP viewer and blocks until Ctrl+C.
+- `launch_configurator(...)` opens a combined config + preview web app (NiceGUI), with YAML load/save and export actions.

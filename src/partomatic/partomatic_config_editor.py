@@ -10,7 +10,10 @@ import yaml
 
 
 class PartomaticConfigEditorMixin:
+    """Serialization and editor-spec helpers for configuration objects."""
+
     def _field_default(self, classfield):
+        """Return a field default value, evaluating default_factory when needed."""
         if classfield.default is not MISSING:
             return classfield.default
         if classfield.default_factory is not MISSING:
@@ -18,6 +21,7 @@ class PartomaticConfigEditorMixin:
         return None
 
     def _to_primitive(self, value: Any):
+        """Convert nested config values into YAML/JSON-serializable primitives."""
         if isinstance(value, (Enum, Flag)):
             return value.name
         if is_dataclass(value):
@@ -33,6 +37,43 @@ class PartomaticConfigEditorMixin:
             return {str(key): self._to_primitive(item) for key, item in value.items()}
         return value
 
+    def _coerce_editor_value(self, field_type, value):
+        """Coerce editor-submitted values to configured field types."""
+        if isinstance(field_type, type) and issubclass(field_type, (Enum, Flag)):
+            if isinstance(value, str):
+                return field_type[value.upper()]
+            return value
+        if is_dataclass(field_type) and isinstance(value, dict):
+            instance = field_type()
+            if hasattr(instance, "update_from_mapping"):
+                instance.update_from_mapping(value)
+                return instance
+            return field_type(**value)
+        return value
+
+    def update_from_mapping(self, data: dict):
+        """Apply validated editor data back onto this config instance."""
+        for classfield in fields(self.__class__):
+            if classfield.name not in data:
+                continue
+            value = data[classfield.name]
+            if is_dataclass(classfield.type) and isinstance(value, dict):
+                current_value = getattr(self, classfield.name, None)
+                if current_value is None:
+                    current_value = classfield.type()
+                    setattr(self, classfield.name, current_value)
+                if hasattr(current_value, "update_from_mapping"):
+                    current_value.update_from_mapping(value)
+                else:
+                    setattr(self, classfield.name, classfield.type(**value))
+                continue
+            setattr(
+                self,
+                classfield.name,
+                self._coerce_editor_value(classfield.type, value),
+            )
+        self.__post_init__()
+
     def as_dict(self) -> dict:
         """Serialize configuration fields to a plain dictionary."""
         return {
@@ -41,6 +82,7 @@ class PartomaticConfigEditorMixin:
         }
 
     def _default_yaml_root(self) -> str:
+        """Return default YAML root node name for this config class."""
         return self._clean_config_class_name.lower()
 
     def to_yaml(self, root_node: str = None) -> str:
@@ -53,6 +95,7 @@ class PartomaticConfigEditorMixin:
         Path(path).write_text(self.to_yaml(root_node=root_node))
 
     def _constraint_map(self, classfield) -> dict:
+        """Collect supported validation/display constraints from field metadata."""
         constraints = {}
         for key in (
             "ge",
@@ -69,6 +112,7 @@ class PartomaticConfigEditorMixin:
         return constraints
 
     def _editor_field_spec(self, field_type, value, classfield):
+        """Create editor schema metadata for a single field."""
         if isinstance(field_type, type) and issubclass(field_type, (Enum, Flag)):
             return {
                 "kind": "enum",
@@ -93,6 +137,7 @@ class PartomaticConfigEditorMixin:
         }
 
     def _editor_spec_for_class(self, cls, value_obj) -> dict:
+        """Create editor schema for all dataclass fields on `cls`."""
         spec = {}
         for classfield in fields(cls):
             current_value = (
@@ -108,6 +153,7 @@ class PartomaticConfigEditorMixin:
         return spec
 
     def _editor_spec(self) -> dict:
+        """Create the top-level editor specification for this config instance."""
         return {
             "class_name": self.__class__.__name__,
             "root_node": self._default_yaml_root(),
@@ -124,13 +170,17 @@ class PartomaticConfigEditorMixin:
     ):
         """Launch a web editor for this configuration.
 
-        Requires optional dependencies:
-            pip install partomatic[gui]
+        Notes:
+            Optional dependencies are required:
+            `pip install partomatic[gui]`.
 
-        Arguments:
-            background: when True, run the UI server in a daemon thread and
-                return the Thread object. Default False blocks the current
-                process while serving the UI.
+        Args:
+            output_file: Optional YAML output path used by the Save button.
+            root_node: Optional override for YAML root node name.
+            host: Hostname/interface for the NiceGUI server.
+            port: Port for the NiceGUI server.
+            background: When True, run the UI server in a daemon thread and
+                return the Thread object. When False, block while serving.
         """
         try:
             import nicegui  # noqa: F401

@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field, fields as dataclass_fields
 from enum import Enum, auto
+import runpy
 import pytest
 from unittest.mock import patch
 from pathlib import Path
@@ -39,6 +40,36 @@ class WheelConfig(PartomaticConfig):
 
 
 class TestPartomaticConfig:
+
+    def test_main_guard_adjusts_path_and_runs_demo(self, monkeypatch):
+        script = str(Path(__file__).parents[1] / "src/partomatic/partomatic_config.py")
+        src_root = str(Path(script).resolve().parents[1])
+        script_dir = str(Path(script).resolve().parent)
+
+        import os
+        import sys
+
+        run_calls = []
+        fake_editor_module = ModuleType("partomatic.config_editor_app")
+        fake_editor_module.run_editor = lambda **kwargs: run_calls.append(kwargs)
+        fake_nicegui_module = ModuleType("nicegui")
+
+        pruned_sys_path = [p for p in sys.path if os.path.abspath(p) != src_root] + [
+            script_dir
+        ]
+        monkeypatch.setattr(sys, "path", pruned_sys_path)
+
+        with patch.dict(
+            sys.modules,
+            {
+                "partomatic.config_editor_app": fake_editor_module,
+                "nicegui": fake_nicegui_module,
+            },
+        ):
+            runpy.run_path(script, run_name="__main__")
+
+        assert sys.path[0] == src_root
+        assert run_calls
 
     def test_load_yaml_wheel(self, wheel_config_yaml):
         config = WheelConfig(wheel_config_yaml)
@@ -265,6 +296,29 @@ Wheel:
         assert spec["fields"]["mode"]["kind"] == "enum"
         assert spec["fields"]["sub"]["kind"] == "object"
 
+    def test_update_from_mapping_updates_nested_fields_and_enums(self):
+        config = WheelConfig()
+
+        config.update_from_mapping(
+            {
+                "depth": 12,
+                "radius": 62.5,
+                "number": "THREE",
+                "bearing": {
+                    "radius": 8.4,
+                    "spindle_radius": 3.2,
+                    "number": "TWO",
+                },
+            }
+        )
+
+        assert config.depth == 12
+        assert config.radius == 62.5
+        assert config.number == FakeEnum.THREE
+        assert config.bearing.radius == 8.4
+        assert config.bearing.spindle_radius == 3.2
+        assert config.bearing.number == FakeEnum.TWO
+
     def test_save_yaml_writes_expected_text(self):
         config = WheelConfig()
 
@@ -275,6 +329,67 @@ Wheel:
         yaml_text = write_text.call_args[0][0]
         assert "wheel:" in yaml_text
         assert "radius: 50" in yaml_text
+
+    def test_coerce_editor_value_dataclass_without_update_from_mapping(self):
+        @dataclass
+        class PlainChild:
+            count: int = 0
+
+        class PlainContainer(PartomaticConfig):
+            child: PlainChild = field(default_factory=PlainChild)
+
+        container = PlainContainer()
+        coerced = container._coerce_editor_value(PlainChild, {"count": 9})
+
+        assert isinstance(coerced, PlainChild)
+        assert coerced.count == 9
+
+    def test_update_from_mapping_sets_none_dataclass_then_updates(self):
+        class OptionalSubConfig(PartomaticConfig):
+            value: int = 1
+
+        class OptionalContainerConfig(PartomaticConfig):
+            sub: OptionalSubConfig = field(default_factory=OptionalSubConfig)
+            number: FakeEnum = FakeEnum.ONE
+
+        config = OptionalContainerConfig()
+        config.sub = None
+
+        config.update_from_mapping({"sub": {"value": 42}, "number": FakeEnum.TWO})
+
+        assert config.sub is not None
+        assert config.sub.value == 42
+        assert config.number == FakeEnum.TWO
+
+    def test_coerce_editor_value_dataclass_with_update_from_mapping(self):
+        @dataclass
+        class UpdaterChild:
+            count: int = 0
+
+            def update_from_mapping(self, data):
+                self.count = data["count"]
+
+        class UpdaterContainer(PartomaticConfig):
+            child: UpdaterChild = field(default_factory=UpdaterChild)
+
+        container = UpdaterContainer()
+        coerced = container._coerce_editor_value(UpdaterChild, {"count": 13})
+
+        assert isinstance(coerced, UpdaterChild)
+        assert coerced.count == 13
+
+    def test_update_from_mapping_replaces_plain_dataclass_without_updater(self):
+        @dataclass
+        class PlainChild:
+            count: int = 1
+
+        class PlainContainer(PartomaticConfig):
+            child: PlainChild = field(default_factory=PlainChild)
+
+        config = PlainContainer()
+        config.update_from_mapping({"child": {"count": 21}})
+
+        assert config.child.count == 21
 
     def test_launch_editor_missing_gui_dependency(self, monkeypatch):
         real_import = __import__

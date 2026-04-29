@@ -1,9 +1,7 @@
 import pytest
-from types import ModuleType
-import sys
-from unittest.mock import patch
 
 from partomatic import Partomatic, PartomaticConfig, PreviewState
+from partomatic.partomatic_preview import PartomaticPreviewMixin
 
 
 class PreviewConfig(PartomaticConfig):
@@ -20,6 +18,17 @@ class PreviewWidget(Partomatic):
 
 
 class TestPartomaticPreview:
+
+    def test_preview_state_without_is_dirty_returns_internal_state(self):
+        class BarePreview(PartomaticPreviewMixin):
+            pass
+
+        widget = BarePreview()
+        widget._init_preview_state()
+        widget._preview_state = PreviewState.CLEAN
+
+        assert widget.preview_state == PreviewState.CLEAN
+
     def test_initial_preview_state(self):
         widget = PreviewWidget()
         assert widget.preview_state == PreviewState.DIRTY
@@ -43,6 +52,17 @@ class TestPartomaticPreview:
         assert widget.preview_state == PreviewState.CLEAN
         assert widget.preview_error is None
 
+    def test_compile_for_preview_short_circuits_when_not_dirty(self):
+        widget = PreviewWidget()
+        widget.compile_for_preview()
+        compile_state = widget.preview_state
+
+        widget.compile_for_preview()
+
+        assert compile_state == PreviewState.CLEAN
+        assert widget.preview_state == PreviewState.CLEAN
+        assert widget.preview_error is None
+
     def test_compile_for_preview_failure_transitions(self):
         widget = PreviewWidget(should_fail=True)
 
@@ -60,44 +80,41 @@ class TestPartomaticPreview:
         assert spec["viewer_url"] == "http://localhost:4040"
         assert spec["initial_state"] == "dirty"
 
-    def test_launch_preview_missing_gui_dependency(self, monkeypatch):
-        real_import = __import__
+    def test_launch_preview_compiles_and_displays(self, monkeypatch):
+        display_calls = []
+        monkeypatch.setattr(
+            "partomatic.partomatic_preview_app._ensure_viewer_running",
+            lambda *_a, **_k: None,
+        )
+        import partomatic.partomatic_preview as _pm
 
-        def fake_import(name, *args, **kwargs):
-            if name == "nicegui":
-                raise ModuleNotFoundError("No module named 'nicegui'")
-            return real_import(name, *args, **kwargs)
-
-        monkeypatch.setattr("builtins.__import__", fake_import)
-
-        with pytest.raises(ModuleNotFoundError, match="partomatic\\[webui\\]"):
-            PreviewWidget().launch_preview()
-
-    def test_launch_preview_foreground_and_background(self):
-        calls = []
-
-        def fake_run_preview(**kwargs):
-            calls.append(kwargs)
-            return "ok"
-
-        fake_app_module = ModuleType("partomatic.partomatic_preview_app")
-        fake_app_module.run_preview = fake_run_preview
-        fake_nicegui_module = ModuleType("nicegui")
+        monkeypatch.setattr(
+            _pm.time, "sleep", lambda _: (_ for _ in ()).throw(KeyboardInterrupt)
+        )
 
         widget = PreviewWidget()
-        with patch.dict(
-            sys.modules,
-            {
-                "partomatic.partomatic_preview_app": fake_app_module,
-                "nicegui": fake_nicegui_module,
-            },
-        ):
-            result = widget.launch_preview(port=8510)
-            assert result == "ok"
-            assert calls[-1]["port"] == 8510
-            assert calls[-1]["partomatic"] is widget
+        monkeypatch.setattr(widget, "compile_for_preview", lambda: None)
+        widget.display = lambda **kwargs: display_calls.append(kwargs)
+        widget.launch_preview(viewer_host="127.0.0.1", viewer_port=3939)
 
-            thread = widget.launch_preview(background=True)
-            thread.join(timeout=1)
-            assert thread.name == "partomatic-preview-ui"
-            assert calls[-1]["spec"]["class_name"] == "PreviewWidget"
+        assert display_calls[-1] == {"viewer_host": "127.0.0.1", "viewer_port": 3939}
+
+    def test_launch_preview_prints_viewer_url(self, monkeypatch, capsys):
+        monkeypatch.setattr(
+            "partomatic.partomatic_preview_app._ensure_viewer_running",
+            lambda *_a, **_k: None,
+        )
+        import partomatic.partomatic_preview as _pm
+
+        monkeypatch.setattr(
+            _pm.time, "sleep", lambda _: (_ for _ in ()).throw(KeyboardInterrupt)
+        )
+
+        widget = PreviewWidget()
+        monkeypatch.setattr(widget, "compile_for_preview", lambda: None)
+        widget.display = lambda **kwargs: None
+        widget.launch_preview(viewer_host="127.0.0.1", viewer_port=3939)
+
+        out = capsys.readouterr().out
+        assert "127.0.0.1:3939" in out
+        assert "Ctrl+C" in out

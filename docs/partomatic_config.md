@@ -41,6 +41,27 @@ wheel_config = WheelConfig()
 print (wheel_config.diameter) # 60.0 - note that this behaves like a field rather than a method that would require parens: `wheel_config.diameter()`
 ```
 
+## Field metadata used by web editors
+
+When using the editor/configurator UIs, field metadata can provide input hints and constraints.
+
+```python
+from dataclasses import field
+
+class WheelConfig(PartomaticConfig):
+    radius: float = field(
+        default=30.0,
+        metadata={
+            "ge": 1.0,
+            "le": 200.0,
+            "step": 0.01,
+            "description": "Wheel radius in mm",
+        },
+    )
+```
+
+The `step` metadata is especially useful for fine-grained float controls in the UI.
+
 ## Nested Partomatic Configs
 
 Now that we have the basic parameters of the wheel set, we might find we need to add a bearing. For something as simple as a bearing we could easily add the bearing properties within the WheelConfig class (e.g. `bearing_radius: float = 2.5`). However, most "simple" subcomponents eventually evolve into something that should be broken into its own class for clarity and portability.
@@ -265,6 +286,7 @@ note that we had to define the dictionary ({}) with the key `wheel` `wheelconfig
 The base PartomaticConfig object also declares the following fields:
 ```python
     stl_folder: str = "NONE"
+    enable_step_exports: bool = False
     file_prefix: str = ""
     file_suffix: str = ""
     create_folders_if_missing: bool = True
@@ -280,6 +302,9 @@ In our example, where we are defining multiple wheel parts to support different 
 
 ### `file_suffix`
 This works the same way as `file_prefix` (described above), but adds this string to the end of each generated file.
+
+### `enable_step_exports`
+This flag is used by UI workflows (notably the configurator) to enable STEP export actions in addition to STL downloads.
 
 ### `create_folders_if_missing`
 By default, Partomatic will create folders if they don’t exist when exporting stl files. If you prefer it to only save parts if the folders already exist, you set this to `False`

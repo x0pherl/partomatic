@@ -1,6 +1,5 @@
 __package__ = "partomatic"
-"""AutomatablePart is a dataclass that contains a Part object and additional inormation for saving and
-displaying the part"""
+"""AutomatablePart holds geometry and export/display metadata."""
 
 from dataclasses import dataclass, field, fields, is_dataclass, MISSING
 from pathlib import Path
@@ -11,13 +10,12 @@ from build123d import Part, Location
 
 @dataclass
 class AutomatablePart:
-    """A dataclass that contains a Part object and additional information for
-    saving and displaying the part
-    ----------
-    Arguments:
-        - part (Part): Part object to be saved and displayed
-        - display_location (Location, optional): Location object to be used for displaying the part
-        - stl_folder (str, optional): Folder where the STL file will be saved.
+    """Contain a part and metadata used for display and export.
+
+    Attributes:
+        part: CAD part geometry.
+        display_location: Placement used when rendering the part.
+        stl_folder: Default export folder for generated files.
     """
 
     part: Part = field(default_factory=Part)
@@ -32,15 +30,13 @@ class AutomatablePart:
         display_location: Location | None = None,
         stl_folder: str | None = None,
     ):
-        """Initializes the AutomatablePart object
-        ----------
-        Arguments:
-            - part (Part): Part object to be saved and displayed
-            - file_name_base (str): the base name of the part -- determines the name of an
-            exported file when combined with the stl_folder and any suffixes and prefixes added
-            - display_location (Location, optional): Location object to be used for displaying the part
-            - stl_folder (str, optional): the folder where the stl file will be saved. if not specified,
-            the current working directory will be used
+        """Initialize an automatable part wrapper.
+
+        Args:
+            part: CAD part to display/export.
+            file_name_base: Base file name used during export (extension removed).
+            display_location: Optional transform/location applied during display.
+            stl_folder: Optional export folder. Defaults to current working directory.
         """
         self.display_location = Location()
         self.file_name_base = file_name_base
@@ -52,12 +48,10 @@ class AutomatablePart:
 
     @property
     def file_name_base(self) -> str:
+        """Return the extension-free base file name for exports."""
         return self._file_name_base
 
     @file_name_base.setter
     def file_name_base(self, value: str):
-        """
-        Assigns the file name to the AutomatablePart, ensuring that no
-        file extension is included.
-        """
+        """Set the base file name, stripping any extension."""
         self._file_name_base = Path(value).stem

@@ -8,6 +8,7 @@ import yaml
 
 
 def _type_for_kind(kind: str):
+    """Map editor field kinds to Python types for pydantic models."""
     if kind == "int":
         return int
     if kind == "float":
@@ -20,6 +21,7 @@ def _type_for_kind(kind: str):
 
 
 def _field_for_model(field_name: str, field_spec: dict):
+    """Build a pydantic field declaration tuple from editor field metadata."""
     kind = field_spec.get("kind", "str")
     constraints = field_spec.get("constraints", {})
     if kind == "object":
@@ -50,6 +52,7 @@ def _field_for_model(field_name: str, field_spec: dict):
 
 
 def _build_model(model_name: str, fields_spec: dict) -> type[BaseModel]:
+    """Create a pydantic model class from editor field specification data."""
     model_fields = {
         name: _field_for_model(name, field_spec)
         for name, field_spec in fields_spec.items()
@@ -58,6 +61,7 @@ def _build_model(model_name: str, fields_spec: dict) -> type[BaseModel]:
 
 
 def _render_field(path: str, name: str, field_spec: dict, form_state: dict):
+    """Render one UI field and return its component (or nested mapping)."""
     kind = field_spec.get("kind", "str")
     key = f"{path}.{name}"
     label = name.replace("_", " ").title()
@@ -112,6 +116,7 @@ def _render_field(path: str, name: str, field_spec: dict, form_state: dict):
 
 
 def _collect_components(fields_spec: dict, form_state: dict) -> dict:
+    """Render all top-level fields and return component tree mapping."""
     values = {}
     for name, field_spec in fields_spec.items():
         values[name] = _render_field("root", name, field_spec, form_state)
@@ -119,6 +124,7 @@ def _collect_components(fields_spec: dict, form_state: dict) -> dict:
 
 
 def _component_value(component_tree):
+    """Recursively read current values from a component tree."""
     if isinstance(component_tree, dict):
         return {
             key: _component_value(component)
@@ -128,12 +134,21 @@ def _component_value(component_tree):
 
 
 def _to_yaml_document(root_node: str, data: dict) -> str:
+    """Serialize validated config data under the given YAML root node."""
     return yaml.safe_dump({root_node: data}, sort_keys=False)
 
 
 def run_editor(
     spec: dict, output_file: str = None, host: str = "localhost", port: int = 8501
 ):
+    """Launch the NiceGUI configuration editor for a schema spec.
+
+    Args:
+        spec: Editor specification with class name, root node, and field schema.
+        output_file: Optional path used by the Save button.
+        host: Hostname/interface for the NiceGUI server.
+        port: Port for the NiceGUI server.
+    """
     class_name = spec.get("class_name", "PartomaticConfig")
     root_node = spec.get("root_node", "config")
     fields_spec = spec.get("fields", {})
