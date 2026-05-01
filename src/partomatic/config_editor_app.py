@@ -156,6 +156,7 @@ def run_editor(
     model = _build_model(f"{class_name}EditorModel", fields_spec)
 
     def build_ui():
+        """Render and wire the editor UI for interactive YAML generation."""
         form_state = {}
 
         with ui.column().classes("w-full max-w-5xl mx-auto p-6 gap-4"):

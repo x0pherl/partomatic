@@ -37,6 +37,7 @@ def _start_ocp_viewer(host: str, port: int):
         return
 
     def run_server():
+        """Run the OCP standalone viewer event loop in a background thread."""
         from ocp_vscode.standalone import Viewer
 
         loop = asyncio.new_event_loop()

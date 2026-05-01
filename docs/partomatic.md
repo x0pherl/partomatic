@@ -1,123 +1,248 @@
 # Partomatic
 
-Partomatic is an [abstract base class](https://docs.python.org/3/library/abc.html) for components within a larger project.
+Partomatic is an [abstract base class](https://docs.python.org/3/library/abc.html) for creating automatable CAD components. There are 3 primary uses for Partomatic:
+  - collecting user modifiable values into a centralized configuration for parametric modeling.
+  - simplifying part generation for complex projects with multiple parts and configurations.
+  - providing a web UI for configuring and downloading customized parts.
 
-Partomatic automatically handles the `__init__` method as well as `load_config`. Overriding these methods is not recommended.
+Partomatic automatically handles `__init__` and `load_config`. Overriding these methods is not recommended.
 
-### Defined Partomatic Variables
+## Quick Start
 
-Partomatic defines two important variables that you descendent classes will inherit:
-```
-    _config: PartomaticConfig
-    parts: list[AutomatablePart] = field(default_factory=list)
-```
+A minimal Partomatic subclass requires only a `_config` class variable typed to your `PartomaticConfig` descendant, and a `compile` method:
 
-`_config` stores the parameters from a PartomaticConfig object. `parts` is a list of AutomatableParts, which partomatic will display or export when the appropriate methods are called.
+```python
+from build123d import BuildPart, Box
+from partomatic import AutomatablePart, Partomatic, PartomaticConfig
 
-### Abstract `compile` method
+class WidgetConfig(PartomaticConfig):
+    stl_folder: str = "./stls"
+    size: float = 20.0
 
-Partomatic defines an abstract methods which must be defined within a descendent class.
-
-This method is responsible for generating the 3d geometry for each component. It should clear the parts list and regenerate each element of your design as a AutomatablePart.
-
-A simple example might look like this:
-
-```
-# ... Partomatic descendant class fragment
-
-    def complete_wheel() -> Part:
-        # <CODE TO GENERATE PART>
+class Widget(Partomatic):
+    _config: WidgetConfig = WidgetConfig()
 
     def compile(self):
-        """
-        Builds the relevant parts for the filament wheel
-        """
         self.parts.clear()
+        with BuildPart() as body:
+            Box(self._config.size, self._config.size, self._config.size)
         self.parts.append(
             AutomatablePart(
-                self.complete_wheel(),
-                "complete-wheel",
+                body.part,
+                "widget",
                 stl_folder=self._config.stl_folder,
             )
         )
 
+widget = Widget()
+widget.partomate()  # compiles and exports STLs to ./stls/
 ```
 
-### Partomatic built-in methods
+## Defined Partomatic Variables
 
-#### `display`
+Partomatic defines two variables that your descendant classes will inherit:
 
-The `display` method will display each AutomatablePart in the `parts` list in the appropriate display_location
+```python
+_config: PartomaticConfig
+parts: list[AutomatablePart] = field(default_factory=list)
+```
 
-You can target a standalone OCP endpoint by passing:
+`_config` holds the parameters from a `PartomaticConfig` object. You must declare `_config` as a class variable in each subclass, typed to your own `PartomaticConfig` descendant:
+
+```python
+class Widget(Partomatic):
+    _config: WidgetConfig = WidgetConfig()
+```
+
+`parts` is a list of `AutomatablePart` objects that `display`, `export_stls`, and `export_steps` operate on. Your `compile` method is responsible for populating it.
+
+### Dirty tracking
+
+Partomatic tracks whether `_config` has changed since the last successful `compile` via the `is_dirty` property. This is used internally by `launch_preview` and `launch_configurator` to avoid redundant recompiles, and is available for your own workflows:
+
+```python
+widget.is_dirty  # True if config changed since last compile
+```
+
+## Built-in Methods
+
+### `load_config`
+
+```python
+foo.load_config(configuration=None, **kwargs)
+```
+
+Loads configuration into this instance. `configuration` may be a file path, a YAML string, an existing compatible config object, or `None` to use defaults. Keyword arguments override individual fields.
+
+See the [PartomaticConfig](partomatic_config.md) documentation for full details on configuration loading.
+
+### Abstract `compile` method
+
+`compile` is the one method you **must** implement in every subclass. It is responsible for generating the 3D geometry and should always clear `self.parts` before repopulating it:
+
+```python
+def compile(self):
+    self.parts.clear()
+    self.parts.append(
+        AutomatablePart(
+            self.complete_wheel(),
+            "complete-wheel",
+            stl_folder=self._config.stl_folder,
+        )
+    )
+```
+
+After a successful `compile`, `is_dirty` will return `False` until `_config` changes again.
+
+### `display`
+
+```python
+foo.display(viewer_host=None, viewer_port=None)
+```
+
+Displays each part in `self.parts` at its configured `display_location` in the OCP CAD viewer. `display` does **not** call `compile` — call `compile` first if the geometry may be stale.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `viewer_host` | `str` | `None` | Hostname of a standalone OCP viewer. Only used when `viewer_port` is also set. |
+| `viewer_port` | `int` | `None` | Port of a standalone OCP viewer. When omitted, uses VS Code's default OCP integration. |
 
 ```python
 foo.display(viewer_host="127.0.0.1", viewer_port=3939)
 ```
 
-#### `export_stls`
+### `partomate`
 
- This method calculates the appropriate file path based on the descendant class’ `stl_folder`, `file_prefix`, the `AutomatablePart`’s `file_name_base` and the `file_prefix` and `file_suffix`. If `create_folders_if_missing` is set to False, no part will be saved if the folder is not present.
+```python
+foo.partomate(export_steps=False)
+```
 
-#### `export_steps`
+Convenience method that calls `compile` then `export_stls`. Pass `export_steps=True` to also write STEP files.
 
-This works the same way as `export_stls`, but writes STEP files instead of STL files.
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `export_steps` | `bool` | `False` | When `True`, also exports STEP files after STLs. |
 
-#### `export_stls_to_directory` / `export_steps_to_directory`
+```python
+foo.partomate(export_steps=True)
+```
 
-These helper methods export directly to an explicit output directory without mutating your config.
+### `export_stls`
+
+```python
+paths = foo.export_stls()
+```
+
+Exports all parts in `self.parts` as STL files. The file path for each part is composed from:
+
+- `self._config.stl_folder` (or the part's own `stl_folder`)
+- `self._config.file_prefix`
+- `AutomatablePart.file_name_base`
+- `self._config.file_suffix`
+
+> **Relative paths** for `stl_folder` are resolved relative to the directory containing your subclass file, not the current working directory.
+
+> **Disabling exports:** set `stl_folder = "NONE"` in your config to skip all file writes (useful for testing or display-only workflows).
+
+> **`file_prefix` and `file_suffix`:** these can be set in a configuration file to make alternate versions of components easy to idenityf.
+
+If `create_folders_if_missing` is `False` and the target directory does not exist, the part is skipped. If `True` (default), missing directories are created automatically.
+
+**Returns:** `list[Path]` — the paths of all files written.
+
+### `export_steps`
+
+```python
+paths = foo.export_steps()
+```
+
+Identical to `export_stls`, but writes STEP files. Follows the same path resolution rules and returns `list[Path]`.
+
+### `export_stls_to_directory` / `export_steps_to_directory`
+
+```python
+paths = foo.export_stls_to_directory(output_dir)
+paths = foo.export_steps_to_directory(output_dir)
+```
+
+Export directly to an explicit directory without modifying your config. Useful for one-off or CI exports.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `output_dir` | `str \| Path` | Target directory for all exported files. |
 
 ```python
 foo.export_stls_to_directory("/tmp/stls")
 foo.export_steps_to_directory("/tmp/steps")
 ```
 
- #### `load_config`
+**Returns:** `list[Path]` — the paths of all files written.
 
- This method will load a configuration from file, kwargs, or a yaml string -- see the `PartomaticConfig` documentation for more details.
-
- #### `partomate`
-
- `partomate` is a convenience function that will execute the `compile` and `export_stls` functions of the Partomatic descendant.
-
-If you want STEP exports in that flow, pass `export_steps=True`:
-
-```python
-foo.partomate(export_steps=True)
-```
-
-#### `launch_preview`
-
-`launch_preview` starts/uses an OCP standalone viewer endpoint, compiles the part, and displays it. This call blocks until you press Ctrl+C.
+### `launch_preview`
 
 ```python
 foo.launch_preview(viewer_host="127.0.0.1", viewer_port=3939)
 ```
 
-#### `launch_configurator`
+Starts (or connects to) a standalone OCP viewer, compiles the part, and pushes it to the viewer. **This call blocks until you press Ctrl+C.**
 
-`launch_configurator` opens a combined NiceGUI app with both config editing and 3D preview in one page.
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `viewer_host` | `str` | `"127.0.0.1"` | Hostname for the standalone OCP viewer. |
+| `viewer_port` | `int` | `3939` | Port for the standalone OCP viewer. |
+
+### `launch_configurator`
+
+```python
+foo.launch_configurator(
+    host="localhost",
+    port=8505,
+    port_retries=10,
+    viewer_host="127.0.0.1",
+    viewer_port=3939,
+    background=False,
+)
+```
+
+Opens a combined NiceGUI web app with a live config editor and 3D preview side by side. **Requires the `webui` extra:**
+
+```bash
+pip install partomatic[webui]
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `host` | `str` | `"localhost"` | NiceGUI server host. |
+| `port` | `int` | `8505` | Starting port. Incremented automatically if occupied. |
+| `port_retries` | `int` | `10` | How many additional ports to try before failing. |
+| `viewer_host` | `str` | `"127.0.0.1"` | OCP viewer host. |
+| `viewer_port` | `int` | `3939` | OCP viewer port. |
+| `background` | `bool` | `False` | When `True`, runs the UI server in a daemon thread and returns immediately. |
 
 Key capabilities:
-- live validation of config fields
+
+- Live validation of config fields
 - YAML load and YAML download
 - STL download
-- STEP download when `enable_step_exports` is true
+- STEP download when `enable_step_exports` is `True`
 
 ```python
 foo.launch_configurator(host="localhost", port=8505, viewer_host="127.0.0.1", viewer_port=3939)
 ```
 
-### Partomatic logging
+## Partomatic Logging
 
-Partomatic logs to the "partomatic" namespace; you can capture and handle partomatic logs easily:
+Partomatic logs to the `"partomatic"` namespace. Attach a handler to capture output:
 
-```
+```python
+import logging
+from sys import stdout
+
 logger = logging.getLogger("partomatic")
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging.StreamHandler(stdout))
 
-foo = Wheel()
-foo._config.stl_folder = "NONE"
+foo = Widget()
+foo._config.stl_folder = "NONE"  # disable file writes
 foo.partomate()
 ```

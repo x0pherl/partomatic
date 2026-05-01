@@ -37,7 +37,6 @@ from partomatic.partomatic_preview_app import (
     _viewer_embed_url,
 )
 
-
 # ---------------------------------------------------------------------------
 # Port utilities
 # ---------------------------------------------------------------------------
@@ -218,6 +217,7 @@ def run_configurator(
     port = find_available_port(host=host, start_port=port, retries=port_retries)
 
     def build_ui():
+        """Build the combined configurator and preview interface."""
         ui.page_title("configurator")
         step_download_item = None
 
@@ -244,6 +244,11 @@ def run_configurator(
                 )
 
                 def _current_validated():
+                    """Return current form data and whether model validation succeeds.
+
+                    Returns:
+                        tuple[dict, bool]: Validated/model-shaped data and validation status.
+                    """
                     values = _component_value(component_tree)
                     try:
                         validated = model.model_validate(values)
@@ -255,6 +260,14 @@ def run_configurator(
                         return values, False
 
                 def _enable_step_exports_value(output_data: dict) -> bool:
+                    """Determine whether STEP export actions should be visible.
+
+                    Args:
+                        output_data: Current validated config mapping.
+
+                    Returns:
+                        bool: True when STEP exports are enabled in the active config.
+                    """
                     return bool(
                         output_data.get(
                             "enable_step_exports",
@@ -263,12 +276,18 @@ def run_configurator(
                     )
 
                 def _sync_export_visibility(output_data: dict):
+                    """Synchronize STEP menu visibility with current config values.
+
+                    Args:
+                        output_data: Current validated config mapping.
+                    """
                     if step_download_item is not None:
                         step_download_item.set_visibility(
                             _enable_step_exports_value(output_data)
                         )
 
                 def _download_yaml():
+                    """Validate and download the current configuration as YAML."""
                     output_data, ok = _current_validated()
                     if not ok:
                         return
@@ -280,6 +299,11 @@ def run_configurator(
                     )
 
                 def _download_export(kind: str):
+                    """Compile and download generated geometry files.
+
+                    Args:
+                        kind: Export file type, either "stl" or "step".
+                    """
                     output_data, ok = _current_validated()
                     if not ok:
                         return
@@ -328,6 +352,11 @@ def run_configurator(
                         ui.notify(f"Export failed: {ex}", type="negative")
 
                 async def _load_yaml_upload(upload_event):
+                    """Load uploaded YAML into form controls and trigger a render.
+
+                    Args:
+                        upload_event: NiceGUI upload event containing YAML text.
+                    """
                     try:
                         yaml_text = await _extract_uploaded_text(upload_event)
                         loaded_data = _yaml_to_config_data(yaml_text, root_node)
@@ -355,6 +384,7 @@ def run_configurator(
                         yaml_upload.run_method("reset")
 
                 def _pick_yaml_file():
+                    """Open the hidden YAML file picker dialog."""
                     yaml_upload.run_method("reset")
                     yaml_upload.run_method("pickFiles")
 
@@ -419,9 +449,15 @@ def run_configurator(
                     )
 
         def _sync_overlay_state():
+            """Show or hide the dirty-state overlay based on preview status."""
             dirty_overlay.set_visibility(partomatic.preview_state == PreviewState.DIRTY)
 
         def on_field_change(_event=None):
+            """Apply form edits to config and update dependent UI state.
+
+            Args:
+                _event: Optional NiceGUI change event payload.
+            """
             output_data, ok = _current_validated()
             _sync_export_visibility(output_data)
             if not ok:
@@ -439,6 +475,7 @@ def run_configurator(
         on_field_change()
 
         def _trigger_render():
+            """Compile and display the part using current validated form values."""
             output_data, ok = _current_validated()
             if not ok:
                 return

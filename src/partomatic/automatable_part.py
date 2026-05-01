@@ -13,7 +13,7 @@ class AutomatablePart:
     """Contain a part and metadata used for display and export.
 
     Attributes:
-        part: CAD part geometry.
+        part: a build123d Part object.
         display_location: Placement used when rendering the part.
         stl_folder: Default export folder for generated files.
     """
@@ -33,11 +33,12 @@ class AutomatablePart:
         """Initialize an automatable part wrapper.
 
         Args:
-            part: CAD part to display/export.
+            part: a build123d Part object.
             file_name_base: Base file name used during export (extension removed).
-            display_location: Optional transform/location applied during display.
+            display_location: Placement used when rendering the part.
             stl_folder: Optional export folder. Defaults to current working directory.
         """
+
         self.display_location = Location()
         self.file_name_base = file_name_base
         self.part = part

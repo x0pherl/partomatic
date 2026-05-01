@@ -326,4 +326,6 @@ if __name__ == "__main__":
     print("Starting Partomatic configurator demo.")
     demo = DemoPart()
     demo._config.enable_step_exports = True
-    demo.launch_configurator(viewer_host="127.0.0.1", viewer_port=3939)
+    demo.launch_configurator(
+        host="0.0.0.0", port=8585, viewer_host="0.0.0.0", viewer_port=3939
+    )
