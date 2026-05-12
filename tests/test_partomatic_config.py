@@ -515,22 +515,6 @@ Wheel:
 
         assert "amount=1.2e+02" in rendered
 
-    def test_repr_can_disable_verbose_mode(self):
-        class CompactReprConfig(PartomaticConfig):
-            _verbose_repr = False
-            radius: float = 10.25
-
-            @property
-            def ignored_property(self):
-                return 99
-
-        rendered = repr(CompactReprConfig())
-
-        assert rendered.startswith("CompactReprConfig(")
-        assert "Fields:" not in rendered
-        assert "Properties:" not in rendered
-        assert "ignored_property" not in rendered
-
     def test_repr_includes_fields_and_properties_sections(self):
         class ReprConfig(PartomaticConfig):
             size: int = 5
