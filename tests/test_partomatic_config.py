@@ -6,6 +6,7 @@ from unittest.mock import patch
 from pathlib import Path
 from types import ModuleType
 import sys
+from typing import ClassVar
 from partomatic import PartomaticConfig
 import yaml
 
@@ -529,3 +530,144 @@ Wheel:
         assert "Fields:" not in rendered
         assert "Properties:" not in rendered
         assert "ignored_property" not in rendered
+
+    def test_repr_includes_fields_and_properties_sections(self):
+        class ReprConfig(PartomaticConfig):
+            size: int = 5
+            ratio: float = 12.34567
+            name: str = "wheel"
+            enabled: bool = True
+
+            @property
+            def diameter(self):
+                return self.size * 2
+
+        rendered = repr(ReprConfig())
+
+        assert "Fields:" in rendered
+        assert "Properties:" in rendered
+        assert "size=5" in rendered
+        assert "ratio=12.35" in rendered
+        assert "name='wheel'" in rendered
+        assert "enabled=True" in rendered
+        assert "diameter=10" in rendered
+
+    def test_repr_handles_property_exceptions_gracefully(self):
+        class ReprErrorConfig(PartomaticConfig):
+            value: int = 1
+
+            @property
+            def exploding(self):
+                raise RuntimeError("boom")
+
+        rendered = repr(ReprErrorConfig())
+
+        assert "exploding='<error: RuntimeError: boom>'" in rendered
+
+    def test_repr_handles_circular_and_large_values(self):
+        class ReprCycleConfig(PartomaticConfig):
+            data: dict = field(default_factory=dict)
+            text: str = "x" * 400
+
+        config = ReprCycleConfig()
+        config.data["self"] = config.data
+        rendered = repr(config)
+
+        assert "<circular-ref>" in rendered
+        assert "text='" in rendered
+        assert "..." in rendered
+
+    def test_repr_includes_inherited_fields_and_properties(self):
+        class ParentReprConfig(PartomaticConfig):
+            parent_value: int = 7
+
+            @property
+            def parent_double(self):
+                return self.parent_value * 2
+
+        class ChildReprConfig(ParentReprConfig):
+            child_value: int = 3
+
+            @property
+            def child_double(self):
+                return self.child_value * 2
+
+        rendered = repr(ChildReprConfig())
+
+        assert "parent_value=7" in rendered
+        assert "child_value=3" in rendered
+        assert "parent_double=14" in rendered
+        assert "child_double=6" in rendered
+
+    def test_repr_supports_float_precision_override(self):
+        class PreciseReprConfig(PartomaticConfig):
+            _repr_float_precision = 2
+            amount: float = 123.456
+
+        rendered = repr(PreciseReprConfig())
+
+        assert "amount=1.2e+02" in rendered
+
+    def test_repr_skips_classvar_annotations(self):
+        class ClassVarConfig(PartomaticConfig):
+            value: int = 1
+            public_constant: ClassVar[int] = 42
+
+        names = ClassVarConfig()._iter_annotated_field_names()
+
+        assert "value" in names
+        assert "public_constant" not in names
+
+    def test_repr_value_container_branches(self):
+        config = WheelConfig()
+
+        # depth-limited dictionary rendering
+        assert config._repr_value({"a": 1}, depth=0) == "{...}"
+
+        # depth-limited sequence/set rendering
+        assert config._repr_value([1, 2], depth=0) == "[...]"
+        assert config._repr_value((1, 2), depth=0) == "(...)"
+        assert config._repr_value({1, 2}, depth=0) == "{...}"
+
+        # non-truncated list rendering path
+        assert config._repr_value([1, 2], depth=1) == "[1, 2]"
+
+        # tuple formatting: one-item tuple and multi-item tuple
+        assert config._repr_value((1,)) == "(1,)"
+        assert config._repr_value((1, 2)) == "(1, 2)"
+
+        # circular detection for non-dict iterables
+        loop = [1]
+        assert config._repr_value(loop, seen={id(loop)}, depth=1) == "<circular-ref>"
+
+        # set rendering in non-truncated path
+        rendered_set = config._repr_value({1, 2}, depth=1)
+        assert rendered_set.startswith("{") and rendered_set.endswith("}")
+
+    def test_default_repr_and_no_sections_fallback(self, monkeypatch):
+        class BasicConfig(PartomaticConfig):
+            amount: float = 2.5
+
+        config = BasicConfig()
+
+        compact = config._default_repr()
+        assert compact.startswith("BasicConfig(")
+        assert "amount=2.5" in compact
+
+        monkeypatch.setattr(BasicConfig, "_iter_annotated_field_names", lambda self: [])
+        monkeypatch.setattr(BasicConfig, "_iter_property_names", lambda self: [])
+
+        assert repr(config) == "BasicConfig()"
+
+    def test_repr_skips_properties_with_field_name_overlap(self, monkeypatch):
+        class OverlapConfig(PartomaticConfig):
+            value: int = 4
+
+        config = OverlapConfig()
+
+        monkeypatch.setattr(
+            OverlapConfig, "_iter_property_names", lambda self: ["value"]
+        )
+
+        rendered = repr(config)
+        assert "Properties:" not in rendered
