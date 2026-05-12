@@ -436,3 +436,96 @@ Wheel:
             thread.join(timeout=1)
             assert thread.name == "partomatic-config-editor"
             assert calls[-1]["port"] == 8501
+
+    def test_repr_includes_fields_and_properties_sections(self):
+        class ReprConfig(PartomaticConfig):
+            size: int = 5
+            ratio: float = 12.34567
+            name: str = "wheel"
+            enabled: bool = True
+
+            @property
+            def diameter(self):
+                return self.size * 2
+
+        rendered = repr(ReprConfig())
+
+        assert "Fields:" in rendered
+        assert "Properties:" in rendered
+        assert "size=5" in rendered
+        assert "ratio=12.35" in rendered
+        assert "name='wheel'" in rendered
+        assert "enabled=True" in rendered
+        assert "diameter=10" in rendered
+
+    def test_repr_handles_property_exceptions_gracefully(self):
+        class ReprErrorConfig(PartomaticConfig):
+            value: int = 1
+
+            @property
+            def exploding(self):
+                raise RuntimeError("boom")
+
+        rendered = repr(ReprErrorConfig())
+
+        assert "exploding='<error: RuntimeError: boom>'" in rendered
+
+    def test_repr_handles_circular_and_large_values(self):
+        class ReprCycleConfig(PartomaticConfig):
+            data: dict = field(default_factory=dict)
+            text: str = "x" * 400
+
+        config = ReprCycleConfig()
+        config.data["self"] = config.data
+        rendered = repr(config)
+
+        assert "<circular-ref>" in rendered
+        assert "text='" in rendered
+        assert "..." in rendered
+
+    def test_repr_includes_inherited_fields_and_properties(self):
+        class ParentReprConfig(PartomaticConfig):
+            parent_value: int = 7
+
+            @property
+            def parent_double(self):
+                return self.parent_value * 2
+
+        class ChildReprConfig(ParentReprConfig):
+            child_value: int = 3
+
+            @property
+            def child_double(self):
+                return self.child_value * 2
+
+        rendered = repr(ChildReprConfig())
+
+        assert "parent_value=7" in rendered
+        assert "child_value=3" in rendered
+        assert "parent_double=14" in rendered
+        assert "child_double=6" in rendered
+
+    def test_repr_supports_float_precision_override(self):
+        class PreciseReprConfig(PartomaticConfig):
+            _repr_float_precision = 2
+            amount: float = 123.456
+
+        rendered = repr(PreciseReprConfig())
+
+        assert "amount=1.2e+02" in rendered
+
+    def test_repr_can_disable_verbose_mode(self):
+        class CompactReprConfig(PartomaticConfig):
+            _verbose_repr = False
+            radius: float = 10.25
+
+            @property
+            def ignored_property(self):
+                return 99
+
+        rendered = repr(CompactReprConfig())
+
+        assert rendered.startswith("CompactReprConfig(")
+        assert "Fields:" not in rendered
+        assert "Properties:" not in rendered
+        assert "ignored_property" not in rendered

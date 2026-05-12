@@ -4,6 +4,7 @@ __package__ = "partomatic"
 from dataclasses import field, fields, is_dataclass, MISSING
 from enum import Enum, Flag
 from pathlib import Path
+from typing import ClassVar, get_origin
 
 from pydantic.dataclasses import dataclass as pydantic_dataclass
 import yaml
@@ -39,7 +40,7 @@ class AutoDataclassMeta(type):
         """
         original_init = dct.get("__init__")
         new_cls = super().__new__(cls, name, bases, dct)
-        new_cls = pydantic_dataclass(kw_only=True)(new_cls)
+        new_cls = pydantic_dataclass(kw_only=True, repr=False)(new_cls)
 
         if original_init is not None:
             new_cls.__init__ = original_init
@@ -54,13 +55,154 @@ class AutoDataclassMeta(type):
 
 
 class PartomaticConfig(PartomaticConfigEditorMixin, metaclass=AutoDataclassMeta):
-    """Base configuration model for Partomatic workflows."""
+    """Base configuration model for Partomatic workflows.
+
+    This class provides an automatic introspection-based ``__repr__`` that
+    prints annotated fields and public properties in separate sections.
+    Subclasses can tune output behavior with class variables:
+
+    - ``_verbose_repr``: enable/disable sectioned verbose output.
+    - ``_repr_float_precision``: significant digits used for float formatting.
+    - ``_repr_max_value_length``: max rendered value length before truncation.
+    """
+
+    _repr_float_precision: ClassVar[int] = 4
+    _repr_max_value_length: ClassVar[int] = 120
 
     stl_folder: str = "NONE"
     enable_step_exports: bool = False
     file_prefix: str = ""
     file_suffix: str = ""
     create_folders_if_missing: bool = True
+
+    def _iter_annotated_field_names(self) -> list[str]:
+        """Return unique public annotated field names from the class hierarchy."""
+        names: list[str] = []
+        for klass in reversed(self.__class__.__mro__):
+            annotations = getattr(klass, "__annotations__", {}) or {}
+            for name, annotated_type in annotations.items():
+                if name.startswith("_"):
+                    continue
+                if get_origin(annotated_type) is ClassVar:
+                    continue
+                if name not in names:
+                    names.append(name)
+        return names
+
+    def _iter_property_names(self) -> list[str]:
+        """Return unique public property names from the class hierarchy."""
+        names: list[str] = []
+        for klass in reversed(self.__class__.__mro__):
+            for name, member in klass.__dict__.items():
+                if name.startswith("_"):
+                    continue
+                if isinstance(member, property) and name not in names:
+                    names.append(name)
+        return names
+
+    def _safe_getattr(self, name: str):
+        """Fetch an attribute and convert failures into a readable marker."""
+        try:
+            return getattr(self, name)
+        except Exception as error:  # pragma: no cover - exercised via repr tests
+            return f"<error: {error.__class__.__name__}: {error}>"
+
+    def _repr_value(self, value, seen: set[int] | None = None, depth: int = 2) -> str:
+        """Render values safely for ``__repr__`` output."""
+        if seen is None:
+            seen = set()
+
+        if isinstance(value, float):
+            precision = max(1, int(getattr(self, "_repr_float_precision", 4)))
+            rendered = format(value, f".{precision}g")
+        elif isinstance(value, dict):
+            if depth <= 0:
+                rendered = "{...}"
+            else:
+                obj_id = id(value)
+                if obj_id in seen:
+                    rendered = "{<circular-ref>}"
+                else:
+                    seen.add(obj_id)
+                    rendered = (
+                        "{"
+                        + ", ".join(
+                            f"{self._repr_value(key, seen, depth - 1)}: {self._repr_value(val, seen, depth - 1)}"
+                            for key, val in value.items()
+                        )
+                        + "}"
+                    )
+                    seen.remove(obj_id)
+        elif isinstance(value, (list, tuple, set)):
+            if depth <= 0:
+                if isinstance(value, list):
+                    rendered = "[...]"
+                elif isinstance(value, tuple):
+                    rendered = "(...)"
+                else:
+                    rendered = "{...}"
+            else:
+                obj_id = id(value)
+                if obj_id in seen:
+                    rendered = "<circular-ref>"
+                else:
+                    seen.add(obj_id)
+                    inner = ", ".join(
+                        self._repr_value(item, seen, depth - 1) for item in value
+                    )
+                    if isinstance(value, list):
+                        rendered = f"[{inner}]"
+                    elif isinstance(value, tuple):
+                        if len(value) == 1:
+                            rendered = f"({inner},)"
+                        else:
+                            rendered = f"({inner})"
+                    else:
+                        rendered = f"{{{inner}}}"
+                    seen.remove(obj_id)
+        else:
+            rendered = repr(value)
+
+        max_len = max(16, int(getattr(self, "_repr_max_value_length", 120)))
+        if len(rendered) > max_len:
+            rendered = f"{rendered[: max_len - 3]}..."
+        return rendered
+
+    def _default_repr(self) -> str:
+        """Return a compact dataclass-field-only representation."""
+        bits = [
+            f"{field_info.name}={self._repr_value(getattr(self, field_info.name))}"
+            for field_info in fields(self)
+            if not field_info.name.startswith("_")
+        ]
+        return f"{self.__class__.__name__}({', '.join(bits)})"
+
+    def __repr__(self) -> str:
+        """Return a robust, sectioned representation of config state."""
+
+        field_lines = []
+        for name in self._iter_annotated_field_names():
+            value = self._safe_getattr(name)
+            field_lines.append(f"    {name}={self._repr_value(value)}")
+
+        property_lines = []
+        field_names = set(self._iter_annotated_field_names())
+        for name in self._iter_property_names():
+            if name in field_names:
+                continue
+            value = self._safe_getattr(name)
+            property_lines.append(f"    {name}={self._repr_value(value)}")
+
+        sections = []
+        if field_lines:
+            sections.append("  Fields:\n" + "\n".join(field_lines))
+        if property_lines:
+            sections.append("  Properties:\n" + "\n".join(property_lines))
+
+        if not sections:
+            return f"{self.__class__.__name__}()"
+
+        return f"{self.__class__.__name__}(\n" + "\n".join(sections) + "\n)"
 
     @property
     def _clean_config_class_name(self) -> str:
